@@ -1,0 +1,14 @@
+# Environment files (API keys, tokens, etc.)
+.env
+
+# Logs
+*.log
+
+# Build outputs
+*.o
+*.out
+
+# GTK-related cache
+*~
+
+listbox

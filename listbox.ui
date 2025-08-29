@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkWindow" id="root">
+    <property name="title">Order Display</property>
+    <property name="default-width">800</property>
+    <property name="default-height">600</property>
+    <child>
+      <object class="GtkScrolledWindow">
+        <property name="vexpand">True</property>
+        <property name="hexpand">True</property>
+        <child>
+          <object class="GtkListBox" id="order_list"/>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

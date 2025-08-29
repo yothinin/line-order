@@ -1,0 +1,20 @@
+window {
+    background-color: #000000;
+}
+
+list {
+    background-color: #000000;
+}
+
+list row,
+label {
+    background-color: #000000;
+    color: #00FF00;
+    font-size: 28px;
+    padding: 12px;
+}
+
+list row:selected {
+    background-color: #FFFFFF;
+    color: #000000;
+}
