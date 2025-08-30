@@ -9,34 +9,6 @@
 const char *STATUS_NAMES[]  = {"รับออเดอร์","กำลังทำอาหาร","กำลังจัดส่ง","จัดส่งแล้ว","ชำระเงินแล้ว"};
 const char *STATUS_COLORS[] = {"green","orange","red","blue","purple"};
 
-//void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
-    //FILE *f = fopen(filename, "r");
-    //if (!f) return;
-
-    //char line[256];
-    //while (fgets(line, sizeof(line), f)) {
-        //line[strcspn(line, "\r\n")] = 0;
-        //if (line[0] == '#' || line[0] == '\0') continue;
-
-        //char *eq = strchr(line, '=');
-        //if (!eq) continue;
-
-        //*eq = 0;
-        //char *key = line;
-        //char *value = eq + 1;
-
-        //if (strcmp(key, "MACHINE_NAME") == 0) {
-            //strncpy(app->machine_name, value, sizeof(app->machine_name)-1);
-            //app->machine_name[sizeof(app->machine_name)-1] = 0;
-        //} else if (strcmp(key, "TOKEN") == 0) {
-            //strncpy(app->token, value, sizeof(app->token)-1);
-            //app->token[sizeof(app->token)-1] = 0;
-        //}
-    //}
-
-    //fclose(f);
-//}
-
 void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
     FILE *f = fopen(filename, "r");
     if (!f) return;
@@ -68,7 +40,6 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
     fclose(f);
 }
 
-
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
     MemoryStruct *mem = (MemoryStruct *)userp;
@@ -80,6 +51,14 @@ size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *user
     mem->size += realsize;
     mem->data[mem->size] = 0;
     return realsize;
+}
+
+void select_first_row(AppWidgets *app) {
+    GtkListBoxRow *first_row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(app->listbox), 0);
+    if (first_row) {
+        gtk_list_box_select_row(GTK_LIST_BOX(app->listbox), first_row);
+        gtk_widget_grab_focus(GTK_WIDGET(first_row));
+    }
 }
 
 gchar* fetch_orders_json(const char *url) {
@@ -136,6 +115,44 @@ void update_order_status(AppWidgets *app, gint order_id, gint status) {
     CURLcode res = curl_easy_perform(curl);
     if(res != CURLE_OK)
         g_printerr("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+}
+
+void update_order_canceled(AppWidgets *app, int order_id, int canceled) {
+    const char *machine_name = app->machine_name;
+    const char *token = app->token;
+
+    if(!machine_name || !token) {
+        g_printerr("❌ MACHINE_NAME หรือ TOKEN ไม่ถูกตั้งค่าใน struct\n");
+        return;
+    }
+
+    CURL *curl = curl_easy_init();
+    if (!curl) return;
+
+    char url[1024];
+    snprintf(url, sizeof(url), "%s/api/store/orders/%d/cancel", app->api_base_url, order_id);
+
+    // สร้าง JSON payload
+    char postfields[256];
+    snprintf(postfields, sizeof(postfields),
+             "{\"cancelled\":%d,\"machine_name\":\"%s\",\"token\":\"%s\"}",
+             canceled, machine_name, token);
+
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        g_warning("Curl failed: %s", curl_easy_strerror(res));
+    }
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
@@ -218,10 +235,7 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
 
         gtk_container_add(GTK_CONTAINER(row), label);
 
-        // เก็บ line_id จริงใน row
-        //g_object_set_data(G_OBJECT(row), "line_id", (gpointer)line_id);
         g_object_set_data_full(G_OBJECT(row), "line_id", g_strdup(line_id), g_free);
-
 
         gtk_list_box_insert(GTK_LIST_BOX(app->listbox), row, i);
 
@@ -256,12 +270,13 @@ void refresh_data(AppWidgets *app) {
          "%s/api/store/orders?date=%s",
          app->api_base_url, date_str);
          
-g_print ("url: %s\n", url);
-
     gchar *json_data = fetch_orders_json(url);
     if(json_data) {
         populate_listbox(app, json_data);
         free(json_data);
+
+        // เลือก row แรกทันทีหลังจากรีเฟรช
+        select_first_row(app);
     }
 }
 
@@ -447,7 +462,7 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
     gint order_id = 0;
     sscanf(text, "#%d", &order_id);
 
-    g_print("สำเร็จ... %d\n", order_id);
+    //g_print("สำเร็จ... %d\n", order_id);
 
     if (order_id > 0) {
         // อ่าน machine_name และ token จาก struct app (หรือ getenv)
@@ -492,6 +507,75 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
     // รีเฟรช listbox ใหม่
     refresh_data(app);
     refocus_selected_row(app);
+
+}
+
+void btn_cancel_clicked_cb(GtkButton *button, gpointer user_data) {
+    AppWidgets *app = (AppWidgets *)user_data;
+
+    // สร้าง dialog ยืนยัน
+    GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(app->window),
+                                               GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                               GTK_MESSAGE_WARNING,
+                                               GTK_BUTTONS_NONE,
+                                               "คุณแน่ใจว่าจะยกเลิกออเดอร์นี้หรือไม่?");
+    gtk_dialog_add_buttons(GTK_DIALOG(dialog),
+                           "_Yes", GTK_RESPONSE_YES,
+                           "_No", GTK_RESPONSE_NO,
+                           NULL);
+
+    // ตั้งค่า default เป็น No
+    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_NO);
+
+    // รอผลตอบกลับ
+    gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+
+    if (response == GTK_RESPONSE_YES) {
+        int order_id = app->selected_order_id;
+        update_order_canceled(app, order_id, 1); // ยกเลิกออเดอร์
+        refresh_data(app); // รีเฟรช listbox
+    }
+}
+
+
+
+void on_btn_paid_clicked(GtkButton *button, gpointer user_data) {
+    AppWidgets *app = (AppWidgets *)user_data;
+
+    // สร้าง dialog ยืนยัน
+    GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(app->window),
+                                               GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                               GTK_MESSAGE_QUESTION,
+                                               GTK_BUTTONS_NONE,
+                                               "คุณแน่ใจว่าชำระเงินแล้ว?");
+    gtk_dialog_add_buttons(GTK_DIALOG(dialog),
+                           "_Yes", GTK_RESPONSE_YES,
+                           "_No", GTK_RESPONSE_NO,
+                           NULL);
+
+    // ตั้งค่า default เป็น No
+    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_NO);
+
+    // รอผลตอบกลับ
+    gint response = gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+
+    if (response == GTK_RESPONSE_YES) {
+        int order_id = app->selected_order_id;
+        int status = 4; // สมมติว่า status 4 = จ่ายแล้ว
+
+        // อัพเดทสถานะ
+        update_order_status(app, order_id, status);
+
+        // รีเฟรช listbox และโฟกัส row แรก
+        refresh_data(app);
+        GtkListBoxRow *first_row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(app->listbox), 0);
+        if (first_row) {
+            gtk_list_box_select_row(GTK_LIST_BOX(app->listbox), first_row);
+            gtk_widget_grab_focus(GTK_WIDGET(first_row));
+        }
+    }
 }
 
 
@@ -501,9 +585,6 @@ int main(int argc, char *argv[]) {
 
     AppWidgets app;
     load_dotenv_to_struct(&app, ".env");
-
-//g_print("Machine: %s\n", app.machine_name);
-//g_print("Token: %s\n", app.token);
 
     app.selected_index = -1;
 
@@ -526,14 +607,26 @@ int main(int argc, char *argv[]) {
     app.btn_done = gtk_button_new_with_label("สำเร็จ");
     gtk_widget_set_sensitive(app.btn_do, FALSE); // เริ่มต้น disable
     gtk_widget_set_sensitive(app.btn_done, FALSE); // เริ่มต้น disable
+    
+    app.btn_cancel = gtk_button_new_with_label("ยกเลิก");
+    gtk_style_context_add_class(gtk_widget_get_style_context(app.btn_cancel), "destructive-action");
+    
+    // สมมติอยู่ใน main() หรือ function ที่สร้าง UI
+    app.btn_paid = gtk_button_new_with_label("จ่ายแล้ว");
 
+    // เพิ่ม style ถ้าต้องการ
+    GtkStyleContext *context = gtk_widget_get_style_context(app.btn_paid);
+    gtk_style_context_add_class(context, "suggested-action"); // หรือใช้ "destructive-action" ตามต้องการ
 
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.btn_do);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.btn_done);
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_cancel);
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_paid);
+    
     g_signal_connect(app.btn_do, "clicked", G_CALLBACK(btn_do_clicked_cb), &app);
     g_signal_connect(app.btn_done, "clicked", G_CALLBACK(btn_done_clicked_cb), &app);
-
-
+    g_signal_connect(app.btn_cancel, "clicked", G_CALLBACK(btn_cancel_clicked_cb), &app);
+    g_signal_connect(app.btn_paid, "clicked", G_CALLBACK(on_btn_paid_clicked), &app);
 
     app.clock_label = gtk_label_new("");
     gtk_widget_set_name(app.clock_label, "clock-label");

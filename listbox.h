@@ -16,7 +16,9 @@ typedef struct {
     GtkWidget *scrolled;
     GtkWidget *btn_do;
     GtkWidget *btn_done;
+    GtkWidget *btn_cancel;
     GtkWidget *clock_label;
+    GtkWidget *btn_paid;
     gint selected_index;
     gint selected_order_id;
 
@@ -29,8 +31,10 @@ typedef struct {
 // ===================== Forward Declarations =====================
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
 gchar* fetch_orders_json(const char *url);
+void select_first_row(AppWidgets *app);
 
 void update_order_status(AppWidgets *app, gint order_id, gint status);
+void update_order_canceled(AppWidgets *app, int order_id, int canceled);
 
 void populate_listbox(AppWidgets *app, const gchar *json_data);
 void refresh_data(AppWidgets *app);
@@ -40,6 +44,7 @@ void scroll_listbox_to_row(AppWidgets *app, gint idx);
 
 void btn_do_clicked_cb(GtkButton *button, gpointer user_data);
 void btn_done_clicked_cb(GtkButton *button, gpointer user_data);
+void btn_cancel_clicked_cb(GtkButton *button, gpointer user_data);
 
 void on_row_selected(GtkListBox *box, GtkListBoxRow *row, AppWidgets *app);
 
