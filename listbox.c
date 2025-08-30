@@ -9,13 +9,41 @@
 const char *STATUS_NAMES[]  = {"รับออเดอร์","กำลังทำอาหาร","กำลังจัดส่ง","จัดส่งแล้ว","ชำระเงินแล้ว"};
 const char *STATUS_COLORS[] = {"green","orange","red","blue","purple"};
 
+//void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
+    //FILE *f = fopen(filename, "r");
+    //if (!f) return;
+
+    //char line[256];
+    //while (fgets(line, sizeof(line), f)) {
+        //line[strcspn(line, "\r\n")] = 0;
+        //if (line[0] == '#' || line[0] == '\0') continue;
+
+        //char *eq = strchr(line, '=');
+        //if (!eq) continue;
+
+        //*eq = 0;
+        //char *key = line;
+        //char *value = eq + 1;
+
+        //if (strcmp(key, "MACHINE_NAME") == 0) {
+            //strncpy(app->machine_name, value, sizeof(app->machine_name)-1);
+            //app->machine_name[sizeof(app->machine_name)-1] = 0;
+        //} else if (strcmp(key, "TOKEN") == 0) {
+            //strncpy(app->token, value, sizeof(app->token)-1);
+            //app->token[sizeof(app->token)-1] = 0;
+        //}
+    //}
+
+    //fclose(f);
+//}
+
 void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
     FILE *f = fopen(filename, "r");
     if (!f) return;
 
     char line[256];
     while (fgets(line, sizeof(line), f)) {
-        line[strcspn(line, "\r\n")] = 0;
+        line[strcspn(line, "\r\n")] = 0; // ตัด newline
         if (line[0] == '#' || line[0] == '\0') continue;
 
         char *eq = strchr(line, '=');
@@ -31,11 +59,15 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
         } else if (strcmp(key, "TOKEN") == 0) {
             strncpy(app->token, value, sizeof(app->token)-1);
             app->token[sizeof(app->token)-1] = 0;
+        } else if (strcmp(key, "API_BASE_URL") == 0) {    // ✅ เพิ่มตรงนี้
+            strncpy(app->api_base_url, value, sizeof(app->api_base_url)-1);
+            app->api_base_url[sizeof(app->api_base_url)-1] = 0;
         }
     }
 
     fclose(f);
 }
+
 
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
@@ -223,7 +255,8 @@ void refresh_data(AppWidgets *app) {
     snprintf(url, sizeof(url),
          "%s/api/store/orders?date=%s",
          app->api_base_url, date_str);
-
+         
+g_print ("url: %s\n", url);
 
     gchar *json_data = fetch_orders_json(url);
     if(json_data) {
