@@ -1,7 +1,7 @@
 .env 
 
-MACHINE_NAME=<<machine_name>>
+MACHINE_NAME=machine_name
 
-TOKEN=<<token>>
+TOKEN=token
 
-API_BASE_URL=<<api url>>
+API_BASE_URL=api url
