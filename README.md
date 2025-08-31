@@ -50,7 +50,7 @@ API_BASE_URL=https://api.example.com
 ## 📄 License
 MIT License
 
-Copyright (c) [ปี] [ชื่อผู้สร้าง]
+Copyright (c) 2025 Yothin Inbanleng
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
