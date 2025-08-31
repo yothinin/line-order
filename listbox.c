@@ -602,7 +602,6 @@ int main(int argc, char *argv[]) {
     gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header), TRUE);
     gtk_window_set_titlebar(GTK_WINDOW(app.window), header);
 
-//    GtkWidget *btn_do = gtk_button_new_with_label("ทำรายการ");
     app.btn_do = gtk_button_new_with_label("ทำรายการ");
     app.btn_done = gtk_button_new_with_label("สำเร็จ");
     gtk_widget_set_sensitive(app.btn_do, FALSE); // เริ่มต้น disable
@@ -618,30 +617,23 @@ int main(int argc, char *argv[]) {
     GtkStyleContext *context = gtk_widget_get_style_context(app.btn_paid);
     gtk_style_context_add_class(context, "suggested-action"); // หรือใช้ "destructive-action" ตามต้องการ
 
+    GtkWidget *btn_up = gtk_button_new_from_icon_name("go-up-symbolic", GTK_ICON_SIZE_DIALOG);
+    GtkWidget *btn_down = gtk_button_new_from_icon_name("go-down-symbolic", GTK_ICON_SIZE_DIALOG);
+
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.btn_do);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.btn_done);
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_up);
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_down);
+
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_cancel);
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_paid);
     
-    g_signal_connect(app.btn_do, "clicked", G_CALLBACK(btn_do_clicked_cb), &app);
-    g_signal_connect(app.btn_done, "clicked", G_CALLBACK(btn_done_clicked_cb), &app);
-    g_signal_connect(app.btn_cancel, "clicked", G_CALLBACK(btn_cancel_clicked_cb), &app);
-    g_signal_connect(app.btn_paid, "clicked", G_CALLBACK(on_btn_paid_clicked), &app);
 
     app.clock_label = gtk_label_new("");
     gtk_widget_set_name(app.clock_label, "clock-label");
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.clock_label);
     update_clock(&app);
     g_timeout_add_seconds(1, update_clock, &app);
-
-    GtkWidget *btn_up = gtk_button_new_from_icon_name("go-up", GTK_ICON_SIZE_DIALOG);
-    GtkWidget *btn_down = gtk_button_new_from_icon_name("go-down", GTK_ICON_SIZE_DIALOG);
-
-    g_signal_connect(btn_up, "clicked", G_CALLBACK(scroll_listbox_up_cb), &app);
-    g_signal_connect(btn_down, "clicked", G_CALLBACK(scroll_listbox_down_cb), &app);
-
-    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_up);
-    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_down);
 
     // ScrolledWindow + ListBox
     app.scrolled = gtk_scrolled_window_new(NULL, NULL);
@@ -650,7 +642,6 @@ int main(int argc, char *argv[]) {
 
     app.listbox = gtk_list_box_new();
     gtk_container_add(GTK_CONTAINER(app.scrolled), app.listbox);
-    g_signal_connect(app.listbox, "row-selected", G_CALLBACK(on_row_selected), &app);
 
     // CSS
     GtkCssProvider *css = gtk_css_provider_new();
@@ -663,12 +654,21 @@ int main(int argc, char *argv[]) {
         "list row:selected label { color: #ffffff; font-size: 48px; }"
         "#clock-label { color: #000000; font-size: 64px; font-weight: bold; }",  // นาฬิกาใหญ่
         -1, &css_error);
+        
     if(css_error) {
         g_printerr("CSS error: %s\n", css_error->message);
         g_error_free(css_error);
     }
     gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
         GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+    g_signal_connect(app.btn_do, "clicked", G_CALLBACK(btn_do_clicked_cb), &app);
+    g_signal_connect(app.btn_done, "clicked", G_CALLBACK(btn_done_clicked_cb), &app);
+    g_signal_connect(btn_up, "clicked", G_CALLBACK(scroll_listbox_up_cb), &app);
+    g_signal_connect(btn_down, "clicked", G_CALLBACK(scroll_listbox_down_cb), &app);
+    g_signal_connect(app.btn_paid, "clicked", G_CALLBACK(on_btn_paid_clicked), &app);
+    g_signal_connect(app.btn_cancel, "clicked", G_CALLBACK(btn_cancel_clicked_cb), &app);
+    g_signal_connect(app.listbox, "row-selected", G_CALLBACK(on_row_selected), &app);
 
     refresh_data(&app);
     g_timeout_add(5000, refresh_data_timeout, &app);
