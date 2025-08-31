@@ -39,18 +39,12 @@ TOKEN=my-secret-token
 API_BASE_URL=https://api.example.com
 ```
 
-.
-├── listbox.c        # main source code
-├── .env             # environment variables
-├── README.md        # project documentation
-
-
 ## 📂 Project Structure
 .
 ├── listbox.c # main source code
 ├── .env # environment variables
 ├── README.md # project documentation
-
+.
 
 ## 📄 License
 MIT License
