@@ -1,9 +1,12 @@
-gcc listbox.c -o listbox \`pkg-config --cflags --libs gtk+-3.0 json-glib-1.0\` -lcurl -Wall
+# 📦 Line Order System (GTK)
 
-.env 
+โปรแกรมจัดการออเดอร์ด้วย **GTK+3**, **JSON-GLib**, และ **cURL**  
+รองรับการตั้งค่า `.env` เพื่อความยืดหยุ่นในการใช้งาน
 
-MACHINE_NAME=machine_name
+---
 
-TOKEN=token
-
-API_BASE_URL=api url
+## ⚙️ Installation
+ติดตั้ง dependencies (Debian/Ubuntu):
+```bash
+sudo apt update
+sudo apt install -y gcc libgtk-3-dev libjson-glib-dev libcurl4-openssl-dev pkg-config
