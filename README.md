@@ -6,24 +6,22 @@
 ## ⚙️ Installation
 ติดตั้ง dependencies (Debian/Ubuntu):
 
-
+```
 sudo apt update
 sudo apt install -y gcc libgtk-3-dev libjson-glib-dev libcurl4-openssl-dev pkg-config
-
+```
 
 ## 🛠️ Build
 คอมไพล์ด้วย:
-
-
+```
 gcc listbox.c -o listbox pkg-config --cflags --libs gtk+-3.0 json-glib-1.0 -lcurl -Wall
-
+```
 
 ## 🚀 Run
 รันโปรแกรม:
-
-
+```
 ./listbox
-
+```
 
 ## 📝 Config (.env)
 ไฟล์ `.env` ต้องอยู่ในโฟลเดอร์เดียวกับ binary:  
