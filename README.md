@@ -31,9 +31,9 @@ gcc listbox.c -o listbox pkg-config --cflags --libs gtk+-3.0 json-glib-1.0 -lcur
 
 
 ## 📝 Config (.env)
-ไฟล์ `.env` ต้องอยู่ในโฟลเดอร์เดียวกับ binary:
+ไฟล์ `.env` ต้องอยู่ในโฟลเดอร์เดียวกับ binary:  
 
-
+```env
 MACHINE_NAME=my-machine
 TOKEN=my-secret-token
 API_BASE_URL=https://api.example.com
