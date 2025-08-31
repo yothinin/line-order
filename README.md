@@ -40,11 +40,12 @@ API_BASE_URL=https://api.example.com
 ```
 
 ## 📂 Project Structure
+```
 .
 ├── listbox.c # main source code
 ├── .env # environment variables
 ├── README.md # project documentation
-.
+```
 
 ## 📄 License
 MIT License
