@@ -37,7 +37,12 @@ gcc listbox.c -o listbox pkg-config --cflags --libs gtk+-3.0 json-glib-1.0 -lcur
 MACHINE_NAME=my-machine
 TOKEN=my-secret-token
 API_BASE_URL=https://api.example.com
+env
 
+.
+├── listbox.c        # main source code
+├── .env             # environment variables
+├── README.md        # project documentation
 
 
 ## 📂 Project Structure
