@@ -136,7 +136,7 @@ void update_order_canceled(AppWidgets *app, int order_id, int canceled) {
     snprintf(url, sizeof(url), "%s/api/store/orders/%d/cancel", app->api_base_url, order_id);
 
     // สร้าง JSON payload
-    char postfields[256];
+    char postfields[512];
     snprintf(postfields, sizeof(postfields),
              "{\"cancelled\":%d,\"machine_name\":\"%s\",\"token\":\"%s\"}",
              canceled, machine_name, token);
@@ -466,8 +466,16 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
 
     if (order_id > 0) {
         // อ่าน machine_name และ token จาก struct app (หรือ getenv)
-        const char *machine_name = app->machine_name ? app->machine_name : getenv("MACHINE_NAME");
-        const char *token = app->token ? app->token : getenv("TOKEN");
+        //const char *machine_name = app->machine_name ? app->machine_name : getenv("MACHINE_NAME");
+        //const char *token = app->token ? app->token : getenv("TOKEN");
+        const char *machine_name = (app->machine_name[0] != '\0')
+                           ? app->machine_name
+                           : getenv("MACHINE_NAME");
+
+        const char *token = (app->token[0] != '\0')
+                    ? app->token
+                    : getenv("TOKEN");
+
 
         if (!machine_name || !token) {
             g_printerr("❌ MACHINE_NAME หรือ TOKEN ไม่ถูกตั้งค่า\n");
