@@ -27,6 +27,12 @@ typedef struct {
     char api_base_url[256];   // 🔹 เพิ่มตรงนี้
 } AppWidgets;
 
+typedef struct {
+    AppWidgets *app;
+    int order_id;
+    GtkWidget *spinner_dialog;
+} CancelTaskData;
+
 
 // ===================== Forward Declarations =====================
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
@@ -53,5 +59,9 @@ gboolean update_clock(gpointer user_data);
 
 void scroll_listbox_up_cb(GtkButton *button, gpointer user_data);
 void scroll_listbox_down_cb(GtkButton *button, gpointer user_data);
+
+void btn_cancel_clicked_cb(GtkButton *button, gpointer user_data);
+void do_cancel_order(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
+void on_cancel_done(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
 
 #endif // LISTBOX_H

@@ -269,7 +269,9 @@ void refresh_data(AppWidgets *app) {
     snprintf(url, sizeof(url),
          "%s/api/store/orders?date=%s",
          app->api_base_url, date_str);
-         
+    
+    //g_print ("url: %s", url);
+    
     gchar *json_data = fetch_orders_json(url);
     if(json_data) {
         populate_listbox(app, json_data);
@@ -521,63 +523,156 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
 void btn_cancel_clicked_cb(GtkButton *button, gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
 
-    // สร้าง dialog ยืนยัน
+    int order_id = app->selected_order_id;
+
+    // สร้างข้อความยืนยันพร้อม order_id
+    gchar *message = g_strdup_printf("กรุณายืนยันยกเลิกออเดอร์ #%d ?", order_id);
+
+    // สร้าง dialog
     GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(app->window),
                                                GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
                                                GTK_MESSAGE_WARNING,
                                                GTK_BUTTONS_NONE,
-                                               "คุณแน่ใจว่าจะยกเลิกออเดอร์นี้หรือไม่?");
-    gtk_dialog_add_buttons(GTK_DIALOG(dialog),
-                           "_Yes", GTK_RESPONSE_YES,
-                           "_No", GTK_RESPONSE_NO,
-                           NULL);
+                                               "%s", message);
 
-    // ตั้งค่า default เป็น No
-    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_NO);
+    // โหลด CSS
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_path(provider, "style.css", NULL);
+
+    // =========================
+    // ปุ่ม Yes (ยืนยันยกเลิก) สีเขียว ✔️
+    // =========================
+    GtkWidget *btn_yes = gtk_button_new();
+    GtkWidget *hbox_yes = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget *icon_yes = gtk_image_new_from_icon_name("emblem-ok", GTK_ICON_SIZE_BUTTON);
+    GtkWidget *label_yes = gtk_label_new("ยืนยัน");
+
+    gtk_box_pack_start(GTK_BOX(hbox_yes), icon_yes, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox_yes), label_yes, FALSE, FALSE, 0);
+    gtk_container_add(GTK_CONTAINER(btn_yes), hbox_yes);
+
+    GtkStyleContext *context = gtk_widget_get_style_context(btn_yes);
+    gtk_style_context_add_provider(context,
+                                   GTK_STYLE_PROVIDER(provider),
+                                   GTK_STYLE_PROVIDER_PRIORITY_USER);
+    gtk_style_context_add_class(context, "yes-button");
+
+    // =========================
+    // ปุ่ม No (ยกเลิก) สีแดง ✖️
+    // =========================
+    GtkWidget *btn_no = gtk_button_new();
+    GtkWidget *hbox_no = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget *icon_no = gtk_image_new_from_icon_name("process-stop", GTK_ICON_SIZE_BUTTON);
+    GtkWidget *label_no = gtk_label_new("ยกเลิก");
+
+    gtk_box_pack_start(GTK_BOX(hbox_no), icon_no, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox_no), label_no, FALSE, FALSE, 0);
+    gtk_container_add(GTK_CONTAINER(btn_no), hbox_no);
+
+    context = gtk_widget_get_style_context(btn_no);
+    gtk_style_context_add_provider(context,
+                                   GTK_STYLE_PROVIDER(provider),
+                                   GTK_STYLE_PROVIDER_PRIORITY_USER);
+    gtk_style_context_add_class(context, "no-button");
+
+    // เพิ่มปุ่มเข้า dialog
+    gtk_dialog_add_action_widget(GTK_DIALOG(dialog), btn_yes, GTK_RESPONSE_YES);
+    gtk_dialog_add_action_widget(GTK_DIALOG(dialog), btn_no, GTK_RESPONSE_NO);
+
+    // ตั้ง default เป็นปุ่มยกเลิก
+    gtk_widget_set_can_default(btn_no, TRUE);
+    gtk_widget_grab_default(btn_no);
+
+    // แสดง dialog และทุก widget
+    gtk_widget_show_all(dialog);
 
     // รอผลตอบกลับ
     gint response = gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
+    g_free(message);
+    g_object_unref(provider);
 
     if (response == GTK_RESPONSE_YES) {
-        int order_id = app->selected_order_id;
         update_order_canceled(app, order_id, 1); // ยกเลิกออเดอร์
         refresh_data(app); // รีเฟรช listbox
     }
 }
 
-
-
 void on_btn_paid_clicked(GtkButton *button, gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
 
-    // สร้าง dialog ยืนยัน
+    int order_id = app->selected_order_id;
+    gchar *message = g_strdup_printf("กรุณายืนยันการชำระเงินออเดอร์ #%d", order_id);
+
+    // สร้าง dialog
     GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(app->window),
                                                GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
                                                GTK_MESSAGE_QUESTION,
                                                GTK_BUTTONS_NONE,
-                                               "คุณแน่ใจว่าชำระเงินแล้ว?");
-    gtk_dialog_add_buttons(GTK_DIALOG(dialog),
-                           "_Yes", GTK_RESPONSE_YES,
-                           "_No", GTK_RESPONSE_NO,
-                           NULL);
+                                               "%s", message);
 
-    // ตั้งค่า default เป็น No
-    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_NO);
+    // โหลด CSS
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_path(provider, "style.css", NULL);
+
+    // =========================
+    // ปุ่ม Yes (ยืนยันจ่ายเงิน) สีเขียว ✔️
+    // =========================
+    GtkWidget *btn_yes = gtk_button_new();
+    GtkWidget *hbox_yes = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget *icon_yes = gtk_image_new_from_icon_name("emblem-ok", GTK_ICON_SIZE_BUTTON);
+    GtkWidget *label_yes = gtk_label_new("ยืนยัน");
+
+    gtk_box_pack_start(GTK_BOX(hbox_yes), icon_yes, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox_yes), label_yes, FALSE, FALSE, 0);
+    gtk_container_add(GTK_CONTAINER(btn_yes), hbox_yes);
+
+    GtkStyleContext *context = gtk_widget_get_style_context(btn_yes);
+    gtk_style_context_add_provider(context,
+                                   GTK_STYLE_PROVIDER(provider),
+                                   GTK_STYLE_PROVIDER_PRIORITY_USER);
+    gtk_style_context_add_class(context, "yes-button");
+
+    // =========================
+    // ปุ่ม No (ยกเลิก) สีแดง ✖️
+    // =========================
+    GtkWidget *btn_no = gtk_button_new();
+    GtkWidget *hbox_no = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget *icon_no = gtk_image_new_from_icon_name("process-stop", GTK_ICON_SIZE_BUTTON);
+    GtkWidget *label_no = gtk_label_new("ยกเลิก");
+
+    gtk_box_pack_start(GTK_BOX(hbox_no), icon_no, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox_no), label_no, FALSE, FALSE, 0);
+    gtk_container_add(GTK_CONTAINER(btn_no), hbox_no);
+
+    context = gtk_widget_get_style_context(btn_no);
+    gtk_style_context_add_provider(context,
+                                   GTK_STYLE_PROVIDER(provider),
+                                   GTK_STYLE_PROVIDER_PRIORITY_USER);
+    gtk_style_context_add_class(context, "no-button");
+
+    // เพิ่มปุ่มเข้า dialog
+    gtk_dialog_add_action_widget(GTK_DIALOG(dialog), btn_yes, GTK_RESPONSE_YES);
+    gtk_dialog_add_action_widget(GTK_DIALOG(dialog), btn_no, GTK_RESPONSE_NO);
+
+    // ตั้ง default เป็นปุ่มยกเลิก
+    gtk_widget_set_can_default(btn_no, TRUE);
+    gtk_widget_grab_default(btn_no);
+
+    // แสดง dialog และทุก widget
+    gtk_widget_show_all(dialog);
 
     // รอผลตอบกลับ
     gint response = gtk_dialog_run(GTK_DIALOG(dialog));
     gtk_widget_destroy(dialog);
+    g_free(message);
+    g_object_unref(provider);
 
     if (response == GTK_RESPONSE_YES) {
-        int order_id = app->selected_order_id;
-        int status = 4; // สมมติว่า status 4 = จ่ายแล้ว
-
-        // อัพเดทสถานะ
+        int status = 4; // จ่ายแล้ว
         update_order_status(app, order_id, status);
 
-        // รีเฟรช listbox และโฟกัส row แรก
-        refresh_data(app);
+        refresh_data(app); // รีเฟรช listbox
         GtkListBoxRow *first_row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(app->listbox), 0);
         if (first_row) {
             gtk_list_box_select_row(GTK_LIST_BOX(app->listbox), first_row);
@@ -585,7 +680,6 @@ void on_btn_paid_clicked(GtkButton *button, gpointer user_data) {
         }
     }
 }
-
 
 
 int main(int argc, char *argv[]) {

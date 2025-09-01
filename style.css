@@ -1,0 +1,28 @@
+button.yes-button {
+    background: #4CAF50;
+    color: white;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-weight: bold;
+    border: 2px solid transparent;
+}
+
+button.no-button {
+    background: #F44336;
+    color: white;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-weight: bold;
+    border: 2px solid transparent;
+}
+
+/* เมื่อปุ่มถูกโฟกัส (เลือกอยู่) */
+button:focus {
+    border: 2px solid yellow;   /* กรอบสีเหลือง */
+    box-shadow: 0 0 6px yellow; /* เงาเรืองแสง */
+}
+
+button:active {
+    opacity: 0.8;              /* ทำให้จางลง */
+    background-color: #333333; /* หรือเปลี่ยนสีพื้นหลัง */
+}
