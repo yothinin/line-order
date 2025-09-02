@@ -1,3 +1,4 @@
+/* ปุ่ม Yes/No เก่า */
 button.yes-button {
     background: #4CAF50;
     color: white;
@@ -16,13 +17,47 @@ button.no-button {
     border: 2px solid transparent;
 }
 
-/* เมื่อปุ่มถูกโฟกัส (เลือกอยู่) */
-button:focus {
-    border: 2px solid yellow;   /* กรอบสีเหลือง */
-    box-shadow: 0 0 6px yellow; /* เงาเรืองแสง */
+/* ปุ่มชำระเงินใหม่ */
+button.transfer { 
+    background-color: #4CAF50; 
+    color: white; 
+    border: 2px solid #388E3C; 
+    border-radius: 5px; 
+    padding: 5px 12px; 
+    font-weight: bold;
 }
 
-button:active {
-    opacity: 0.8;              /* ทำให้จางลง */
-    background-color: #333333; /* หรือเปลี่ยนสีพื้นหลัง */
+button.cash { 
+    background-color: #2196F3; 
+    color: white; 
+    border: 2px solid #1976D2; 
+    border-radius: 5px; 
+    padding: 5px 12px; 
+    font-weight: bold;
 }
+
+button.cancel { 
+    background-color: #F44336; 
+    color: white; 
+    border: 2px solid #D32F2F; 
+    border-radius: 5px; 
+    padding: 5px 12px; 
+    font-weight: bold;
+}
+
+/* focus/active ทุกปุ่ม */
+button:focus, 
+button:focus:active, 
+button:active {
+    border: 3px solid black;   /* ขอบหนาขึ้น */
+    box-shadow: 0 0 5px black; /* เงา glow */
+    outline: none;             /* ปิด outline default */
+    opacity: 0.9;
+}
+
+/* hover เพิ่ม effect เล็กน้อย */
+button:hover {
+    opacity: 0.95;
+}
+
+

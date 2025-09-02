@@ -63,5 +63,6 @@ void scroll_listbox_down_cb(GtkButton *button, gpointer user_data);
 void btn_cancel_clicked_cb(GtkButton *button, gpointer user_data);
 void do_cancel_order(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
 void on_cancel_done(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
+void btn_paid_clicked_cb(GtkButton *button, gpointer user_data);
 
 #endif // LISTBOX_H

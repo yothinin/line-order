@@ -681,6 +681,112 @@ void on_btn_paid_clicked(GtkButton *button, gpointer user_data) {
     }
 }
 
+//void btn_paid_clicked_cb(GtkButton *button, gpointer user_data) {
+    //AppWidgets *app = (AppWidgets *)user_data;
+    //int order_id = app->selected_order_id;
+
+    //// สร้าง dialog
+    //GtkWidget *dialog = gtk_dialog_new_with_buttons(
+        //NULL,
+        //GTK_WINDOW(app->window),
+        //GTK_DIALOG_MODAL,
+        //"โอนเงิน", 4,
+        //"เงินสด", 5,
+        //"ยกเลิก", GTK_RESPONSE_CANCEL,
+        //NULL
+    //);
+
+    //// เพิ่มข้อความด้านบน
+    //gchar *message = g_strdup_printf("กรุณาเลือกวิธีการชำระเงินของออเดอร์ #%d", order_id);
+    //GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    //GtkWidget *label = gtk_label_new(message);
+    //gtk_box_pack_start(GTK_BOX(content_area), label, TRUE, TRUE, 10);
+    //gtk_widget_show(label);
+    //g_free(message);
+
+    //// ตั้ง default response เป็น Cancel
+    //gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
+
+    //// แสดง dialog ทั้งหมด
+    //gtk_widget_show_all(dialog);
+
+    //// รอผลตอบกลับ
+    //gint result = gtk_dialog_run(GTK_DIALOG(dialog));
+    //gtk_widget_destroy(dialog);
+
+    //// ประมวลผล
+    //if (result == 4) {
+        //update_order_status(app, order_id, 4); // โอนเงิน
+    //} else if (result == 5) {
+        //update_order_status(app, order_id, 5); // เงินสด
+    //}
+    //// Cancel ไม่ทำอะไร
+//}
+
+void btn_paid_clicked_cb(GtkButton *button, gpointer user_data) {
+    AppWidgets *app = (AppWidgets *)user_data;
+    int order_id = app->selected_order_id;
+
+    // สร้าง dialog เปล่า
+    GtkWidget *dialog = gtk_dialog_new();
+    gtk_window_set_title(GTK_WINDOW(dialog), "เลือกวิธีชำระเงิน");
+    gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(app->window));
+    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+
+    // เพิ่มข้อความด้านบน
+    gchar *message = g_strdup_printf("กรุณาเลือกวิธีการชำระเงินของออเดอร์ #%d", order_id);
+    GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget *label = gtk_label_new(message);
+    gtk_box_pack_start(GTK_BOX(content_area), label, TRUE, TRUE, 10);
+    gtk_widget_show(label);
+    g_free(message);
+
+    // เพิ่มปุ่ม
+    GtkWidget *btn_transfer = gtk_dialog_add_button(GTK_DIALOG(dialog), "โอนเงิน", 4);
+    GtkWidget *btn_cash     = gtk_dialog_add_button(GTK_DIALOG(dialog), "เงินสด", 5);
+    GtkWidget *btn_cancel   = gtk_dialog_add_button(GTK_DIALOG(dialog), "ยกเลิก", GTK_RESPONSE_CANCEL);
+
+    // ตั้ง default เป็น Cancel
+    gtk_widget_set_can_default(btn_cancel, TRUE);
+    gtk_widget_grab_default(btn_cancel);
+    gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
+
+    // โหลด CSS
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_path(provider, "style.css", NULL);
+
+    // กำหนด style ปุ่ม
+    GtkStyleContext *ctx;
+    ctx = gtk_widget_get_style_context(btn_transfer);
+    gtk_style_context_add_provider(ctx, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+    gtk_style_context_add_class(ctx, "transfer");
+
+    ctx = gtk_widget_get_style_context(btn_cash);
+    gtk_style_context_add_provider(ctx, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+    gtk_style_context_add_class(ctx, "cash");
+
+    ctx = gtk_widget_get_style_context(btn_cancel);
+    gtk_style_context_add_provider(ctx, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+    gtk_style_context_add_class(ctx, "cancel");
+
+    // แสดง dialog
+    gtk_widget_show_all(dialog);
+
+    // รอผลตอบกลับ
+    gint result = gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+    g_object_unref(provider);
+
+    if (result == 4) {
+        update_order_status(app, order_id, 4); // โอนเงิน
+    } else if (result == 5) {
+        update_order_status(app, order_id, 5); // เงินสด
+    }
+    // Cancel ไม่ทำอะไร
+}
+
+
+
 
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
@@ -768,7 +874,8 @@ int main(int argc, char *argv[]) {
     g_signal_connect(app.btn_done, "clicked", G_CALLBACK(btn_done_clicked_cb), &app);
     g_signal_connect(btn_up, "clicked", G_CALLBACK(scroll_listbox_up_cb), &app);
     g_signal_connect(btn_down, "clicked", G_CALLBACK(scroll_listbox_down_cb), &app);
-    g_signal_connect(app.btn_paid, "clicked", G_CALLBACK(on_btn_paid_clicked), &app);
+    //g_signal_connect(app.btn_paid, "clicked", G_CALLBACK(on_btn_paid_clicked), &app);
+    g_signal_connect(app.btn_paid, "clicked", G_CALLBACK(btn_paid_clicked_cb), &app);
     g_signal_connect(app.btn_cancel, "clicked", G_CALLBACK(btn_cancel_clicked_cb), &app);
     g_signal_connect(app.listbox, "row-selected", G_CALLBACK(on_row_selected), &app);
 
