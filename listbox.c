@@ -9,32 +9,36 @@
 const char *STATUS_NAMES[]  = {"รับออเดอร์","กำลังทำอาหาร","กำลังจัดส่ง","จัดส่งแล้ว","ชำระเงินแล้ว"};
 const char *STATUS_COLORS[] = {"green","orange","red","blue","purple"};
 
+static void set_field(char *dest, size_t size, const char *value) {
+    strncpy(dest, value, size - 1);
+    dest[size - 1] = '\0';
+}
+
 void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
     FILE *f = fopen(filename, "r");
     if (!f) return;
 
     char line[256];
     while (fgets(line, sizeof(line), f)) {
-        line[strcspn(line, "\r\n")] = 0; // ตัด newline
+        line[strcspn(line, "\r\n")] = '\0';
         if (line[0] == '#' || line[0] == '\0') continue;
 
         char *eq = strchr(line, '=');
         if (!eq) continue;
 
-        *eq = 0;
+        *eq = '\0';
         char *key = line;
         char *value = eq + 1;
 
-        if (strcmp(key, "MACHINE_NAME") == 0) {
-            strncpy(app->machine_name, value, sizeof(app->machine_name)-1);
-            app->machine_name[sizeof(app->machine_name)-1] = 0;
-        } else if (strcmp(key, "TOKEN") == 0) {
-            strncpy(app->token, value, sizeof(app->token)-1);
-            app->token[sizeof(app->token)-1] = 0;
-        } else if (strcmp(key, "API_BASE_URL") == 0) {    // ✅ เพิ่มตรงนี้
-            strncpy(app->api_base_url, value, sizeof(app->api_base_url)-1);
-            app->api_base_url[sizeof(app->api_base_url)-1] = 0;
-        }
+        while (*key == ' ') key++;
+        while (*value == ' ') value++;
+
+        if (strcmp(key, "MACHINE_NAME") == 0)
+            set_field(app->machine_name, sizeof(app->machine_name), value);
+        else if (strcmp(key, "TOKEN") == 0)
+            set_field(app->token, sizeof(app->token), value);
+        else if (strcmp(key, "API_BASE_URL") == 0)
+            set_field(app->api_base_url, sizeof(app->api_base_url), value);
     }
 
     fclose(f);
@@ -255,32 +259,31 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
 }
 
 
-// ------------
-
 void refresh_data(AppWidgets *app) {
-    time_t t = time(NULL);
-    struct tm tm_now;
-    localtime_r(&t, &tm_now);
-
     char date_str[11];
-    strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
+
+    if (strlen(app->filter_date) > 0) {
+        strncpy(date_str, app->filter_date, sizeof(date_str));
+    } else {
+        time_t t = time(NULL);
+        struct tm tm_now;
+        localtime_r(&t, &tm_now);
+        strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
+    }
 
     char url[1024];
     snprintf(url, sizeof(url),
          "%s/api/store/orders?date=%s",
          app->api_base_url, date_str);
-    
-    //g_print ("url: %s", url);
-    
+
     gchar *json_data = fetch_orders_json(url);
     if(json_data) {
         populate_listbox(app, json_data);
         free(json_data);
-
-        // เลือก row แรกทันทีหลังจากรีเฟรช
         select_first_row(app);
     }
 }
+
 
 void refocus_selected_row(AppWidgets *app) {
     if (app->selected_index < 0) return;
@@ -681,48 +684,6 @@ void on_btn_paid_clicked(GtkButton *button, gpointer user_data) {
     }
 }
 
-//void btn_paid_clicked_cb(GtkButton *button, gpointer user_data) {
-    //AppWidgets *app = (AppWidgets *)user_data;
-    //int order_id = app->selected_order_id;
-
-    //// สร้าง dialog
-    //GtkWidget *dialog = gtk_dialog_new_with_buttons(
-        //NULL,
-        //GTK_WINDOW(app->window),
-        //GTK_DIALOG_MODAL,
-        //"โอนเงิน", 4,
-        //"เงินสด", 5,
-        //"ยกเลิก", GTK_RESPONSE_CANCEL,
-        //NULL
-    //);
-
-    //// เพิ่มข้อความด้านบน
-    //gchar *message = g_strdup_printf("กรุณาเลือกวิธีการชำระเงินของออเดอร์ #%d", order_id);
-    //GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    //GtkWidget *label = gtk_label_new(message);
-    //gtk_box_pack_start(GTK_BOX(content_area), label, TRUE, TRUE, 10);
-    //gtk_widget_show(label);
-    //g_free(message);
-
-    //// ตั้ง default response เป็น Cancel
-    //gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
-
-    //// แสดง dialog ทั้งหมด
-    //gtk_widget_show_all(dialog);
-
-    //// รอผลตอบกลับ
-    //gint result = gtk_dialog_run(GTK_DIALOG(dialog));
-    //gtk_widget_destroy(dialog);
-
-    //// ประมวลผล
-    //if (result == 4) {
-        //update_order_status(app, order_id, 4); // โอนเงิน
-    //} else if (result == 5) {
-        //update_order_status(app, order_id, 5); // เงินสด
-    //}
-    //// Cancel ไม่ทำอะไร
-//}
-
 void btn_paid_clicked_cb(GtkButton *button, gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
     int order_id = app->selected_order_id;
@@ -785,7 +746,46 @@ void btn_paid_clicked_cb(GtkButton *button, gpointer user_data) {
     // Cancel ไม่ทำอะไร
 }
 
+void on_calendar_button_clicked(GtkButton *button, gpointer user_data) {
+    AppWidgets *app = (AppWidgets *)user_data;
 
+    GtkWidget *dialog = gtk_dialog_new_with_buttons("เลือกวันที่",
+        GTK_WINDOW(app->window),
+        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+        "_OK", GTK_RESPONSE_OK,
+        "_Cancel", GTK_RESPONSE_CANCEL,
+        NULL);
+
+    GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget *calendar = gtk_calendar_new();
+    gtk_container_add(GTK_CONTAINER(content), calendar);
+    gtk_widget_show_all(dialog);
+
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK) {
+        guint year, month, day;
+        gtk_calendar_get_date(GTK_CALENDAR(calendar), &year, &month, &day);
+
+        // month ใน GtkCalendar เริ่มที่ 0 → ต้อง +1
+        snprintf(app->filter_date, sizeof(app->filter_date),
+                 "%04d-%02d-%02d", year, month + 1, day);
+
+        gtk_label_set_text(GTK_LABEL(app->lbl_filter_date), app->filter_date);
+
+        refresh_data(app);
+    }
+
+    gtk_widget_destroy(dialog);
+}
+
+// ฟังก์ชัน callback สำหรับอัปเดตวันที่
+void calendar_day_selected_cb(GtkCalendar *calendar, gpointer user_data) {
+    GtkWidget *label = GTK_WIDGET(user_data);
+    guint year, month, day;
+    gtk_calendar_get_date(calendar, &year, &month, &day); // month เริ่มจาก 0
+    gchar *date_str = g_strdup_printf("%04u-%02u-%02u", year, month + 1, day);
+    gtk_label_set_text(GTK_LABEL(label), date_str);
+    g_free(date_str);
+}
 
 
 int main(int argc, char *argv[]) {
@@ -836,6 +836,13 @@ int main(int argc, char *argv[]) {
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_cancel);
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_paid);
     
+        // ปุ่มเลือกวันที่
+    GtkWidget *btn_calendar = gtk_button_new_from_icon_name("x-office-calendar", GTK_ICON_SIZE_BUTTON);
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_calendar);
+    g_signal_connect(btn_calendar, "clicked", G_CALLBACK(on_calendar_button_clicked), &app);
+    
+    app.lbl_filter_date = gtk_label_new("ส่งวันนี้");
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.lbl_filter_date);
 
     app.clock_label = gtk_label_new("");
     gtk_widget_set_name(app.clock_label, "clock-label");

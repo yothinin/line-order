@@ -25,6 +25,13 @@ typedef struct {
     char machine_name[128];
     char token[128];
     char api_base_url[256];   // 🔹 เพิ่มตรงนี้
+    
+    char filter_date[11];       // YYYY-MM-DD
+    
+    GtkWidget *btn_calendar;
+    GtkWidget *lbl_filter_date;
+    GtkWidget *header_bar; // ถ้ายังไม่มี HeaderBar
+
 } AppWidgets;
 
 typedef struct {
