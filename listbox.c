@@ -40,7 +40,7 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
         else if (strcmp(key, "API_BASE_URL") == 0)
             set_field(app->api_base_url, sizeof(app->api_base_url), value);
     }
-
+ 
     fclose(f);
 }
 
@@ -260,10 +260,13 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
 
 
 void refresh_data(AppWidgets *app) {
-    char date_str[11];
+    char date_str[11] = {0};   // init ให้ null-terminated ตั้งแต่แรก
 
+    // ถ้ามี filter_date ใช้ค่า ถ้าไม่ใช้วันปัจจุบัน
     if (strlen(app->filter_date) > 0) {
-        strncpy(date_str, app->filter_date, sizeof(date_str));
+        strncpy(date_str, app->filter_date, sizeof(date_str) - 1);
+        date_str[sizeof(date_str) - 1] = '\0';
+        date_str[strcspn(date_str, "\r\n")] = '\0'; // ตัด newline เผื่อมี
     } else {
         time_t t = time(NULL);
         struct tm tm_now;
@@ -273,8 +276,10 @@ void refresh_data(AppWidgets *app) {
 
     char url[1024];
     snprintf(url, sizeof(url),
-         "%s/api/store/orders?date=%s",
-         app->api_base_url, date_str);
+             "%s/api/store/orders?date=%s",
+             app->api_base_url, date_str);
+
+//    printf("🔍 Final fetch URL = [%s]\n", url); // debug
 
     gchar *json_data = fetch_orders_json(url);
     if(json_data) {
@@ -283,7 +288,6 @@ void refresh_data(AppWidgets *app) {
         select_first_row(app);
     }
 }
-
 
 void refocus_selected_row(AppWidgets *app) {
     if (app->selected_index < 0) return;
@@ -787,11 +791,96 @@ void calendar_day_selected_cb(GtkCalendar *calendar, gpointer user_data) {
     g_free(date_str);
 }
 
+void print_slip_full(Order *order) {
+    if (!order) return;
+
+    // สร้าง QR Code จาก order_id
+    char qrdata[64];
+    snprintf(qrdata, sizeof(qrdata), "ORDER_ID:%d", order->order_id);
+    QRcode *qrcode = QRcode_encodeString(qrdata, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
+    if (!qrcode) {
+        g_printerr("❌ ไม่สามารถสร้าง QR code ได้\n");
+        return;
+    }
+
+    // ตั้งค่า canvas
+    int scale = 6; // ขยาย QR code
+    int qr_size = qrcode->width * scale;
+    int line_height = 20;
+    int header_height = 60;
+    int total_height = header_height + order->item_count * line_height + qr_size + 40;
+
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 400, total_height);
+    cairo_t *cr = cairo_create(surface);
+
+    // พื้นหลังขาว
+    cairo_set_source_rgb(cr, 1, 1, 1);
+    cairo_paint(cr);
+
+    // เขียนหัวสลิป
+    cairo_set_source_rgb(cr, 0, 0, 0);
+    cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_set_font_size(cr, 20);
+    cairo_move_to(cr, 10, 30);
+    cairo_show_text(cr, "สลิปการทำรายการ");
+
+    // วันที่ และ Order ID
+    cairo_set_font_size(cr, 16);
+    char buf[128];
+    snprintf(buf, sizeof(buf), "Order ID: %d", order->order_id);
+    cairo_move_to(cr, 10, 50);
+    cairo_show_text(cr, buf);
+
+    snprintf(buf, sizeof(buf), "Date: %s", order->date);
+    cairo_move_to(cr, 10, 70);
+    cairo_show_text(cr, buf);
+
+    // รายการสินค้า
+    double total = 0;
+    int y = 100;
+    for (int i = 0; i < order->item_count; i++) {
+        OrderItem *item = &order->items[i];
+        snprintf(buf, sizeof(buf), "%s x%d  %.2f", item->name, item->qty, item->price * item->qty);
+        cairo_move_to(cr, 10, y);
+        cairo_show_text(cr, buf);
+        y += line_height;
+        total += item->price * item->qty;
+    }
+
+    // ราคาทั้งหมด
+    snprintf(buf, sizeof(buf), "Total: %.2f", total);
+    cairo_move_to(cr, 10, y);
+    cairo_show_text(cr, buf);
+
+    // วาด QR Code
+    cairo_translate(cr, 150, y + 20);
+    for (int yy = 0; yy < qrcode->width; yy++) {
+        for (int xx = 0; xx < qrcode->width; xx++) {
+            if (qrcode->data[yy * qrcode->width + xx] & 1) {
+                cairo_rectangle(cr, xx * scale, yy * scale, scale, scale);
+            }
+        }
+    }
+    cairo_fill(cr);
+
+    // ปิดและ save เป็นไฟล์ชั่วคราว
+    QRcode_free(qrcode);
+    cairo_destroy(cr);
+    const char *filename = "/tmp/slip.png";
+    cairo_surface_write_to_png(surface, filename);
+    cairo_surface_destroy(surface);
+
+    // ส่งไป printer
+    char cmd[256];
+    snprintf(cmd, sizeof(cmd), "lpr %s", filename);
+    system(cmd);
+}
 
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
 
     AppWidgets app;
+	app.filter_date[0] = '\0'; // เริ่มต้นเป็น empty string
     load_dotenv_to_struct(&app, ".env");
 
     app.selected_index = -1;

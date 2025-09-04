@@ -5,6 +5,25 @@
 #include <json-glib/json-glib.h>
 #include <curl/curl.h>
 
+#include <qrencode.h>
+#include <cairo.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+
+typedef struct {
+    const char *name;
+    int qty;
+    double price;
+} OrderItem;
+
+typedef struct {
+    int order_id;
+    const char *date;
+    OrderItem *items;
+    int item_count;
+} Order;
+
 typedef struct {
     char *data;
     size_t size;
