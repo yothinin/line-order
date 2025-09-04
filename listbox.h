@@ -7,27 +7,50 @@
 
 #include <qrencode.h>
 #include <cairo.h>
+#include <pango/pangocairo.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 
+#define PAPER_WIDTH_MM 80
+#define DPI 203                   // thermal printer ส่วนมาก ~203 dpi
+#define PAPER_WIDTH_PX ((PAPER_WIDTH_MM/25.4)*DPI)
+
+typedef enum {
+    MEASURE_ONLY,
+    DRAW_TEXT
+} DrawMode;
+
 typedef struct {
-    const char *name;
+    char name[128];
     int qty;
     double price;
 } OrderItem;
 
 typedef struct {
     int order_id;
-    const char *date;
-    OrderItem *items;
+    char line_name[128];
+    char place[128];
+    char delivery_time[32];
+    char statusText[128];
+    char created_at[32];
+    int cancelled;
     int item_count;
+    OrderItem items[50];
 } Order;
+
+
 
 typedef struct {
     char *data;
     size_t size;
 } MemoryStruct;
+
+struct MemoryStruct {
+    char *memory;
+    size_t size;
+};
+
 
 typedef struct {
     GtkWidget *window;
@@ -90,5 +113,7 @@ void btn_cancel_clicked_cb(GtkButton *button, gpointer user_data);
 void do_cancel_order(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
 void on_cancel_done(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
 void btn_paid_clicked_cb(GtkButton *button, gpointer user_data);
+void print_slip_full(Order *order);
+Order *get_order_by_id(const char *api_base_url, const char *machine_name, const char *token, int order_id);
 
 #endif // LISTBOX_H

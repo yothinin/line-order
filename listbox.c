@@ -449,7 +449,78 @@ void scroll_listbox_down_cb(GtkButton *button, gpointer user_data) {
     }
 }
 
-// callback ปุ่ม "สำเร็จ"
+//// callback ปุ่ม "สำเร็จ"
+//void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
+    //AppWidgets *app = (AppWidgets *)user_data;
+
+    //if (app->selected_index < 0) return;
+
+    //GtkListBoxRow *row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(app->listbox), app->selected_index);
+    //if (!row) return;
+
+    //gint status = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(row), "status"));
+    //if (status != 1) {
+        //g_print("ไม่สามารถเปลี่ยนสถานะเป็น 2 ได้ เพราะสถานะปัจจุบันไม่ใช่ 1\n");
+        //return;
+    //}
+
+    //GtkWidget *label = gtk_bin_get_child(GTK_BIN(row));
+    //const gchar *text = gtk_label_get_text(GTK_LABEL(label));
+    //gint order_id = 0;
+    //sscanf(text, "#%d", &order_id);
+
+    //if (order_id > 0) {
+        //const char *machine_name = (app->machine_name[0] != '\0')
+                           //? app->machine_name
+                           //: getenv("MACHINE_NAME");
+        //const char *token = (app->token[0] != '\0')
+                    //? app->token
+                    //: getenv("TOKEN");
+
+        //if (!machine_name || !token) {
+            //g_printerr("❌ MACHINE_NAME หรือ TOKEN ไม่ถูกตั้งค่า\n");
+            //return;
+        //}
+
+        //CURL *curl = curl_easy_init();
+        //if (curl) {
+            //char url[1024];
+            //snprintf(url, sizeof(url), "%s/api/store/orders/%d/update_status",
+              //app->api_base_url, order_id);
+
+            //char postfields[512];
+            //snprintf(postfields, sizeof(postfields),
+                     //"{\"status\":2,\"machine_name\":\"%s\",\"token\":\"%s\"}",
+                     //machine_name, token);
+
+            //struct curl_slist *headers = NULL;
+            //headers = curl_slist_append(headers, "Content-Type: application/json");
+
+            //curl_easy_setopt(curl, CURLOPT_URL, url);
+            //curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            //curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
+            //curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+
+            //CURLcode res = curl_easy_perform(curl);
+            //if (res != CURLE_OK) {
+                //g_printerr("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            //} else {
+                //// ✅ API สำเร็จ → เรียกพิมพ์สลิป
+                //Order *order = get_order_by_id(order_id);  // ต้องมีฟังก์ชันนี้
+                //if (order) {
+                    //print_slip_full(order);
+                //}
+            //}
+
+            //curl_slist_free_all(headers);
+            //curl_easy_cleanup(curl);
+        //}
+    //}
+
+    //refresh_data(app);
+    //refocus_selected_row(app);
+//}
+// 4/9/2025
 void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
 
@@ -470,62 +541,48 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
     const gchar *text = gtk_label_get_text(GTK_LABEL(label));
     gint order_id = 0;
     sscanf(text, "#%d", &order_id);
+    if (order_id <= 0) return;
 
-    //g_print("สำเร็จ... %d\n", order_id);
+    // ส่งไป API /api/store/orders/:id/update_status
+    CURL *curl = curl_easy_init();
+    if (curl) {
+        char url[1024];
+        snprintf(url, sizeof(url), "%s/api/store/orders/%d/update_status",
+                 app->api_base_url, order_id);
 
-    if (order_id > 0) {
-        // อ่าน machine_name และ token จาก struct app (หรือ getenv)
-        //const char *machine_name = app->machine_name ? app->machine_name : getenv("MACHINE_NAME");
-        //const char *token = app->token ? app->token : getenv("TOKEN");
-        const char *machine_name = (app->machine_name[0] != '\0')
-                           ? app->machine_name
-                           : getenv("MACHINE_NAME");
+        char postfields[512];
+        snprintf(postfields, sizeof(postfields),
+                 "{\"status\":2,\"machine_name\":\"%s\",\"token\":\"%s\"}",
+                 app->machine_name, app->token);
 
-        const char *token = (app->token[0] != '\0')
-                    ? app->token
-                    : getenv("TOKEN");
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
 
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
 
-        if (!machine_name || !token) {
-            g_printerr("❌ MACHINE_NAME หรือ TOKEN ไม่ถูกตั้งค่า\n");
-            return;
-        }
+        CURLcode res = curl_easy_perform(curl);
+        if (res != CURLE_OK)
+            g_printerr("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 
-        // ส่งไป API /api/store/orders/:id/update_status
-        CURL *curl = curl_easy_init();
-        if (curl) {
-            char url[1024];
-            snprintf(url, sizeof(url), "%s/api/store/orders/%d/update_status",
-              app->api_base_url, order_id);
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
 
-
-            char postfields[512];
-            snprintf(postfields, sizeof(postfields),
-                     "{\"status\":2,\"machine_name\":\"%s\",\"token\":\"%s\"}",
-                     machine_name, token);
-
-            struct curl_slist *headers = NULL;
-            headers = curl_slist_append(headers, "Content-Type: application/json");
-
-            curl_easy_setopt(curl, CURLOPT_URL, url);
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
-
-            CURLcode res = curl_easy_perform(curl);
-            if (res != CURLE_OK)
-                g_printerr("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-
-            curl_slist_free_all(headers);
-            curl_easy_cleanup(curl);
-        }
+    // ดึง order ล่าสุดจาก API และพิมพ์สลิป
+    Order *order = get_order_by_id(app->api_base_url, app->machine_name, app->token, order_id);
+    if (order) {
+        print_slip_full(order);
+        g_free(order);
     }
 
     // รีเฟรช listbox ใหม่
     refresh_data(app);
     refocus_selected_row(app);
-
 }
+
 
 void btn_cancel_clicked_cb(GtkButton *button, gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
@@ -791,90 +848,247 @@ void calendar_day_selected_cb(GtkCalendar *calendar, gpointer user_data) {
     g_free(date_str);
 }
 
+void draw_text(PangoLayout *layout, cairo_t *cr, int x, int *y, const char *text, int font_size, int bold) {
+    pango_layout_set_text(layout, text, -1);
+    char font_desc[64];
+    snprintf(font_desc, sizeof(font_desc), "%s %d", bold ? "Noto Sans Thai Bold" : "Noto Sans Thai", font_size);
+    PangoFontDescription *desc = pango_font_description_from_string(font_desc);
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+    
+    cairo_set_source_rgb(cr, 0, 0, 0);
+
+    cairo_move_to(cr, x, *y);
+    pango_cairo_show_layout(cr, layout);
+
+    int height;
+    pango_layout_get_pixel_size(layout, NULL, &height);
+    *y += height + 5;
+}
+
 void print_slip_full(Order *order) {
     if (!order) return;
 
-    // สร้าง QR Code จาก order_id
-    char qrdata[64];
-    snprintf(qrdata, sizeof(qrdata), "ORDER_ID:%d", order->order_id);
-    QRcode *qrcode = QRcode_encodeString(qrdata, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
-    if (!qrcode) {
-        g_printerr("❌ ไม่สามารถสร้าง QR code ได้\n");
-        return;
+    int surface_width = 400;
+    int y = 10;
+    char buf[256];
+
+    // ---- Phase 1: วัดขนาดด้วย recording surface ----
+    cairo_surface_t *rec_surface = cairo_recording_surface_create(CAIRO_CONTENT_COLOR_ALPHA, NULL);
+    cairo_t *rec_cr = cairo_create(rec_surface);
+    PangoLayout *layout = pango_cairo_create_layout(rec_cr);
+
+    // ข้อความหัว + รายการ + รวม + QR
+    snprintf(buf, sizeof(buf), "ออเดอร์ #%d", order->order_id);
+    draw_text(layout, rec_cr, 10, &y, buf, 18, 1);
+    snprintf(buf, sizeof(buf), "ลูกค้า: %s", order->line_name);
+    draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
+    snprintf(buf, sizeof(buf), "สถานที่ส่ง: %s", order->place);
+    draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
+    snprintf(buf, sizeof(buf), "เวลาส่ง: %s", order->delivery_time);
+    draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
+    snprintf(buf, sizeof(buf), "สถานะ: %s", order->statusText);
+    draw_text(layout, rec_cr, 10, &y, buf, 16, 1);
+    snprintf(buf, sizeof(buf), "วันที่สั่ง: %s", order->created_at);
+    draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
+
+    draw_text(layout, rec_cr, 10, &y, "รายการ:", 16, 1);
+    double totalAmount = 0;
+    for (int i = 0; i < order->item_count; i++) {
+        snprintf(buf, sizeof(buf), "- %s x%d  %.2f", order->items[i].name, order->items[i].qty, order->items[i].price);
+        draw_text(layout, rec_cr, 20, &y, buf, 16, 0);
+        totalAmount += order->items[i].price * order->items[i].qty;
     }
+    snprintf(buf, sizeof(buf), "รวมทั้งหมด: %.2f บาท", totalAmount);
+    draw_text(layout, rec_cr, 10, &y, buf, 16, 1);
 
-    // ตั้งค่า canvas
-    int scale = 6; // ขยาย QR code
-    int qr_size = qrcode->width * scale;
-    int line_height = 20;
-    int header_height = 60;
-    int total_height = header_height + order->item_count * line_height + qr_size + 40;
+    int qr_size = 120;
+    y += qr_size + 20; // กันพื้นที่ QR
 
-    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, 400, total_height);
+    // ความสูงจริง
+    int total_height = y;
+
+    // ---- Phase 2: render จริง ----
+    cairo_destroy(rec_cr);
+    cairo_surface_destroy(rec_surface);
+    g_object_unref(layout);
+
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, surface_width, total_height);
     cairo_t *cr = cairo_create(surface);
+    layout = pango_cairo_create_layout(cr);
 
     // พื้นหลังขาว
-    cairo_set_source_rgb(cr, 1, 1, 1);
+    cairo_set_source_rgb(cr, 1,1,1);
     cairo_paint(cr);
 
-    // เขียนหัวสลิป
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-    cairo_set_font_size(cr, 20);
-    cairo_move_to(cr, 10, 30);
-    cairo_show_text(cr, "สลิปการทำรายการ");
+    y = 10;
+    snprintf(buf, sizeof(buf), "ออเดอร์ #%d", order->order_id);
+    draw_text(layout, cr, 10, &y, buf, 18, 1);
+    snprintf(buf, sizeof(buf), "ลูกค้า: %s", order->line_name);
+    draw_text(layout, cr, 10, &y, buf, 16, 0);
+    snprintf(buf, sizeof(buf), "สถานที่ส่ง: %s", order->place);
+    draw_text(layout, cr, 10, &y, buf, 16, 0);
+    snprintf(buf, sizeof(buf), "เวลาส่ง: %s", order->delivery_time);
+    draw_text(layout, cr, 10, &y, buf, 16, 0);
+    snprintf(buf, sizeof(buf), "วันที่สั่ง: %s", order->created_at);
+    draw_text(layout, cr, 10, &y, buf, 16, 0);
 
-    // วันที่ และ Order ID
-    cairo_set_font_size(cr, 16);
-    char buf[128];
-    snprintf(buf, sizeof(buf), "Order ID: %d", order->order_id);
-    cairo_move_to(cr, 10, 50);
-    cairo_show_text(cr, buf);
-
-    snprintf(buf, sizeof(buf), "Date: %s", order->date);
-    cairo_move_to(cr, 10, 70);
-    cairo_show_text(cr, buf);
-
-    // รายการสินค้า
-    double total = 0;
-    int y = 100;
+    draw_text(layout, cr, 10, &y, "รายการ:", 16, 1);
+    totalAmount = 0;
     for (int i = 0; i < order->item_count; i++) {
-        OrderItem *item = &order->items[i];
-        snprintf(buf, sizeof(buf), "%s x%d  %.2f", item->name, item->qty, item->price * item->qty);
-        cairo_move_to(cr, 10, y);
-        cairo_show_text(cr, buf);
-        y += line_height;
-        total += item->price * item->qty;
+        snprintf(buf, sizeof(buf), "- %s x%d  %.2f", order->items[i].name, order->items[i].qty, order->items[i].price);
+        draw_text(layout, cr, 20, &y, buf, 16, 0);
+        totalAmount += order->items[i].price * order->items[i].qty;
     }
+    snprintf(buf, sizeof(buf), "รวมทั้งหมด: %.2f บาท", totalAmount);
+    draw_text(layout, cr, 10, &y, buf, 16, 1);
 
-    // ราคาทั้งหมด
-    snprintf(buf, sizeof(buf), "Total: %.2f", total);
-    cairo_move_to(cr, 10, y);
-    cairo_show_text(cr, buf);
+    // QR code
+    char qrdata[64];
+    snprintf(qrdata, sizeof(qrdata), "%d", order->order_id);
+    QRcode *qrcode = QRcode_encodeString(qrdata, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
+    if (qrcode) {
+        int scale = 4;
+        int qr_margin = 4;
+        int qr_draw_size = (qrcode->width + 2*qr_margin) * scale;
+        int qr_x = (surface_width - qr_draw_size)/2;
+        int qr_y = y + 10;
 
-    // วาด QR Code
-    cairo_translate(cr, 150, y + 20);
-    for (int yy = 0; yy < qrcode->width; yy++) {
-        for (int xx = 0; xx < qrcode->width; xx++) {
-            if (qrcode->data[yy * qrcode->width + xx] & 1) {
-                cairo_rectangle(cr, xx * scale, yy * scale, scale, scale);
+        cairo_set_source_rgb(cr, 1,1,1);
+        cairo_rectangle(cr, qr_x, qr_y, qr_draw_size, qr_draw_size);
+        cairo_fill(cr);
+
+        cairo_translate(cr, qr_x + qr_margin*scale, qr_y + qr_margin*scale);
+        cairo_set_source_rgb(cr, 0,0,0);
+        for (int yy = 0; yy < qrcode->width; yy++) {
+            for (int xx = 0; xx < qrcode->width; xx++) {
+                if (qrcode->data[yy * qrcode->width + xx] & 1) {
+                    cairo_rectangle(cr, xx*scale, yy*scale, scale, scale);
+                }
             }
         }
+        cairo_fill(cr);
+        QRcode_free(qrcode);
     }
-    cairo_fill(cr);
 
-    // ปิดและ save เป็นไฟล์ชั่วคราว
-    QRcode_free(qrcode);
+    cairo_surface_write_to_png(surface, "/tmp/slip.png");
+
+    // cleanup
     cairo_destroy(cr);
-    const char *filename = "/tmp/slip.png";
-    cairo_surface_write_to_png(surface, filename);
     cairo_surface_destroy(surface);
+    g_object_unref(layout);
 
-    // ส่งไป printer
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "lpr %s", filename);
-    system(cmd);
+    printf("✅ สลิปสร้างเสร็จแล้ว: /tmp/slip.png\n");
 }
+
+// ตาม header
+Order *get_order_by_id(const char *api_base_url, const char *machine_name, const char *token, int order_id) {
+    CURL *curl = curl_easy_init();
+    if (!curl) return NULL;
+
+    Order *order = malloc(sizeof(Order));
+    if (!order) return NULL;
+    memset(order, 0, sizeof(Order));
+
+    struct MemoryStruct chunk = {0};  // ต้องมี struct สำหรับ WriteMemoryCallback
+
+    // สร้าง URL แบบ query parameter
+    char url[512];
+    snprintf(url, sizeof(url), "%s/api/store/orders/%d?machine_name=%s&token=%s",
+             api_base_url, order_id, machine_name, token);
+    url[sizeof(url)-1] = '\0';
+
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
+    CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        free(chunk.memory);
+        curl_easy_cleanup(curl);
+        curl_slist_free_all(headers);
+        free(order);
+        return NULL;
+    }
+
+    curl_easy_cleanup(curl);
+    curl_slist_free_all(headers);
+
+    // --- parse JSON ---
+    JsonParser *parser = json_parser_new();
+    GError *error = NULL;
+    if (!json_parser_load_from_data(parser, chunk.memory, -1, &error)) {
+        fprintf(stderr, "JSON parse error: %s\n", error->message);
+        g_error_free(error);
+        free(chunk.memory);
+        g_object_unref(parser);
+        free(order);
+        return NULL;
+    }
+
+    JsonNode *root = json_parser_get_root(parser);
+    JsonObject *root_obj = json_node_get_object(root);
+    gboolean success = json_object_get_boolean_member(root_obj, "success");
+    if (!success) {
+        fprintf(stderr, "API returned failure\n");
+        g_object_unref(parser);
+        free(chunk.memory);
+        free(order);
+        return NULL;
+    }
+
+    JsonObject *order_obj = json_object_get_object_member(root_obj, "order");
+    if (!order_obj) {
+        g_object_unref(parser);
+        free(chunk.memory);
+        free(order);
+        return NULL;
+    }
+
+    // --- เติมข้อมูลลง struct Order ---
+    order->order_id = json_object_get_int_member(order_obj, "id");
+    const char *line_name = json_object_get_string_member(order_obj, "line_name");
+    const char *place = json_object_get_string_member(order_obj, "place");
+    const char *delivery_time = json_object_get_string_member(order_obj, "delivery_time");
+    const char *created_at = json_object_get_string_member(order_obj, "created_at");
+    int cancelled = json_object_get_int_member(order_obj, "cancelled");
+
+    strncpy(order->line_name, line_name ? line_name : "", sizeof(order->line_name)-1);
+    strncpy(order->place, place ? place : "", sizeof(order->place)-1);
+    strncpy(order->delivery_time, delivery_time ? delivery_time : "", sizeof(order->delivery_time)-1);
+    strncpy(order->created_at, created_at ? created_at : "", sizeof(order->created_at)-1);
+    order->cancelled = cancelled;
+
+    // --- items ---
+    JsonArray *items_array = json_object_get_array_member(order_obj, "items");
+    order->item_count = 0;
+    if (items_array) {
+        int n = json_array_get_length(items_array);
+        for (int i=0; i<n && i<50; i++) {
+            JsonObject *item_obj = json_array_get_object_element(items_array, i);
+            const char *item_name = json_object_get_string_member(item_obj, "item_name");
+            int qty = json_object_get_int_member(item_obj, "qty");
+            const char *price_str = json_object_get_string_member(item_obj, "price");
+            double price = price_str ? atof(price_str) : 0.0;
+
+            strncpy(order->items[i].name, item_name ? item_name : "", sizeof(order->items[i].name)-1);
+            order->items[i].qty = qty;
+            order->items[i].price = price;
+            order->item_count++;
+        }
+    }
+
+    g_object_unref(parser);
+    free(chunk.memory);
+
+    return order;
+}
+
 
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
