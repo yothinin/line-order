@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include "slip.h"
 
 const char *STATUS_NAMES[]  = {"รับออเดอร์","กำลังทำอาหาร","กำลังจัดส่ง","จัดส่งแล้ว","ชำระเงินแล้ว"};
 const char *STATUS_COLORS[] = {"green","orange","red","blue","purple"};
@@ -848,7 +849,7 @@ void calendar_day_selected_cb(GtkCalendar *calendar, gpointer user_data) {
     g_free(date_str);
 }
 
-void draw_text(PangoLayout *layout, cairo_t *cr, int x, int *y, const char *text, int font_size, int bold) {
+void draw_textxxx(PangoLayout *layout, cairo_t *cr, int x, int *y, const char *text, int font_size, int bold) {
     pango_layout_set_text(layout, text, -1);
     char font_desc[64];
     snprintf(font_desc, sizeof(font_desc), "%s %d", bold ? "Noto Sans Thai Bold" : "Noto Sans Thai", font_size);
@@ -866,7 +867,7 @@ void draw_text(PangoLayout *layout, cairo_t *cr, int x, int *y, const char *text
     *y += height + 5;
 }
 
-void print_slip_full(Order *order) {
+void print_slip_fullxxx(Order *order) {
     if (!order) return;
 
     int surface_width = 400;

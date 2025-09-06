@@ -113,7 +113,7 @@ void btn_cancel_clicked_cb(GtkButton *button, gpointer user_data);
 void do_cancel_order(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
 void on_cancel_done(GTask *task, gpointer source_object, gpointer task_data, GCancellable *cancellable);
 void btn_paid_clicked_cb(GtkButton *button, gpointer user_data);
-void print_slip_full(Order *order);
+void print_slip_fullxxx(Order *order);
 Order *get_order_by_id(const char *api_base_url, const char *machine_name, const char *token, int order_id);
 
 #endif // LISTBOX_H
