@@ -25,7 +25,9 @@ typedef struct {
     char name[128];
     int qty;
     double price;
+    char option_text[128]; // เพิ่มช่องสำหรับเก็บ option
 } OrderItem;
+
 
 typedef struct {
     int order_id;
