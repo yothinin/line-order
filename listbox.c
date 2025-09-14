@@ -40,6 +40,8 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
             set_field(app->token, sizeof(app->token), value);
         else if (strcmp(key, "API_BASE_URL") == 0)
             set_field(app->api_base_url, sizeof(app->api_base_url), value);
+        else if (strcmp(key, "MONITOR") == 0)
+            app->selected_monitor = atoi(value);  // แปลงค่าเป็น int
     }
  
     fclose(f);
@@ -163,8 +165,6 @@ void update_order_canceled(AppWidgets *app, int order_id, int canceled) {
     curl_easy_cleanup(curl);
 }
 
-
-
 // ตัวอย่าง populate_listbox
 void populate_listbox(AppWidgets *app, const gchar *json_data) {
     gtk_list_box_unselect_all(GTK_LIST_BOX(app->listbox));
@@ -260,14 +260,43 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
 }
 
 
-void refresh_data(AppWidgets *app) {
-    char date_str[11] = {0};   // init ให้ null-terminated ตั้งแต่แรก
+//void refresh_data(AppWidgets *app) {
+    //char date_str[11] = {0};   // init ให้ null-terminated ตั้งแต่แรก
 
-    // ถ้ามี filter_date ใช้ค่า ถ้าไม่ใช้วันปัจจุบัน
+    //// ถ้ามี filter_date ใช้ค่า ถ้าไม่ใช้วันปัจจุบัน
+    //if (strlen(app->filter_date) > 0) {
+        //strncpy(date_str, app->filter_date, sizeof(date_str) - 1);
+        //date_str[sizeof(date_str) - 1] = '\0';
+        //date_str[strcspn(date_str, "\r\n")] = '\0'; // ตัด newline เผื่อมี
+    //} else {
+        //time_t t = time(NULL);
+        //struct tm tm_now;
+        //localtime_r(&t, &tm_now);
+        //strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
+    //}
+
+    //char url[1024];
+    //snprintf(url, sizeof(url),
+             //"%s/api/store/orders?date=%s",
+             //app->api_base_url, date_str);
+
+////    printf("🔍 Final fetch URL = [%s]\n", url); // debug
+
+    //gchar *json_data = fetch_orders_json(url);
+    //if(json_data) {
+        //populate_listbox(app, json_data);
+        //free(json_data);
+        //select_first_row(app);
+    //}
+//}
+
+void refresh_data(AppWidgets *app) {
+    char date_str[11] = {0};
+
     if (strlen(app->filter_date) > 0) {
         strncpy(date_str, app->filter_date, sizeof(date_str) - 1);
         date_str[sizeof(date_str) - 1] = '\0';
-        date_str[strcspn(date_str, "\r\n")] = '\0'; // ตัด newline เผื่อมี
+        date_str[strcspn(date_str, "\r\n")] = '\0';
     } else {
         time_t t = time(NULL);
         struct tm tm_now;
@@ -277,18 +306,18 @@ void refresh_data(AppWidgets *app) {
 
     char url[1024];
     snprintf(url, sizeof(url),
-             "%s/api/store/orders?date=%s",
-             app->api_base_url, date_str);
-
-//    printf("🔍 Final fetch URL = [%s]\n", url); // debug
+             "%s/api/store/orders?date=%s&monitor=%d",
+             app->api_base_url, date_str,
+             (app->selected_monitor > 0 ? app->selected_monitor : 1));
 
     gchar *json_data = fetch_orders_json(url);
-    if(json_data) {
+    if (json_data) {
         populate_listbox(app, json_data);
         free(json_data);
         select_first_row(app);
     }
 }
+
 
 void refocus_selected_row(AppWidgets *app) {
     if (app->selected_index < 0) return;
@@ -450,78 +479,6 @@ void scroll_listbox_down_cb(GtkButton *button, gpointer user_data) {
     }
 }
 
-//// callback ปุ่ม "สำเร็จ"
-//void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
-    //AppWidgets *app = (AppWidgets *)user_data;
-
-    //if (app->selected_index < 0) return;
-
-    //GtkListBoxRow *row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(app->listbox), app->selected_index);
-    //if (!row) return;
-
-    //gint status = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(row), "status"));
-    //if (status != 1) {
-        //g_print("ไม่สามารถเปลี่ยนสถานะเป็น 2 ได้ เพราะสถานะปัจจุบันไม่ใช่ 1\n");
-        //return;
-    //}
-
-    //GtkWidget *label = gtk_bin_get_child(GTK_BIN(row));
-    //const gchar *text = gtk_label_get_text(GTK_LABEL(label));
-    //gint order_id = 0;
-    //sscanf(text, "#%d", &order_id);
-
-    //if (order_id > 0) {
-        //const char *machine_name = (app->machine_name[0] != '\0')
-                           //? app->machine_name
-                           //: getenv("MACHINE_NAME");
-        //const char *token = (app->token[0] != '\0')
-                    //? app->token
-                    //: getenv("TOKEN");
-
-        //if (!machine_name || !token) {
-            //g_printerr("❌ MACHINE_NAME หรือ TOKEN ไม่ถูกตั้งค่า\n");
-            //return;
-        //}
-
-        //CURL *curl = curl_easy_init();
-        //if (curl) {
-            //char url[1024];
-            //snprintf(url, sizeof(url), "%s/api/store/orders/%d/update_status",
-              //app->api_base_url, order_id);
-
-            //char postfields[512];
-            //snprintf(postfields, sizeof(postfields),
-                     //"{\"status\":2,\"machine_name\":\"%s\",\"token\":\"%s\"}",
-                     //machine_name, token);
-
-            //struct curl_slist *headers = NULL;
-            //headers = curl_slist_append(headers, "Content-Type: application/json");
-
-            //curl_easy_setopt(curl, CURLOPT_URL, url);
-            //curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-            //curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postfields);
-            //curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
-
-            //CURLcode res = curl_easy_perform(curl);
-            //if (res != CURLE_OK) {
-                //g_printerr("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-            //} else {
-                //// ✅ API สำเร็จ → เรียกพิมพ์สลิป
-                //Order *order = get_order_by_id(order_id);  // ต้องมีฟังก์ชันนี้
-                //if (order) {
-                    //print_slip_full(order);
-                //}
-            //}
-
-            //curl_slist_free_all(headers);
-            //curl_easy_cleanup(curl);
-        //}
-    //}
-
-    //refresh_data(app);
-    //refocus_selected_row(app);
-//}
-// 4/9/2025
 void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
 
@@ -849,118 +806,6 @@ void calendar_day_selected_cb(GtkCalendar *calendar, gpointer user_data) {
     g_free(date_str);
 }
 
-//// ตาม header
-//Order *get_order_by_id(const char *api_base_url, const char *machine_name, const char *token, int order_id) {
-    //CURL *curl = curl_easy_init();
-    //if (!curl) return NULL;
-
-    //Order *order = malloc(sizeof(Order));
-    //if (!order) return NULL;
-    //memset(order, 0, sizeof(Order));
-
-    //struct MemoryStruct chunk = {0};  // ต้องมี struct สำหรับ WriteMemoryCallback
-
-    //// สร้าง URL แบบ query parameter
-    //char url[512];
-    //snprintf(url, sizeof(url), "%s/api/store/orders/%d?machine_name=%s&token=%s",
-             //api_base_url, order_id, machine_name, token);
-    //url[sizeof(url)-1] = '\0';
-
-    //struct curl_slist *headers = NULL;
-    //headers = curl_slist_append(headers, "Content-Type: application/json");
-
-    //curl_easy_setopt(curl, CURLOPT_URL, url);
-    //curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    //curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-    //curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-
-    //CURLcode res = curl_easy_perform(curl);
-    //if (res != CURLE_OK) {
-        //fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-        //free(chunk.memory);
-        //curl_easy_cleanup(curl);
-        //curl_slist_free_all(headers);
-        //free(order);
-        //return NULL;
-    //}
-
-    //curl_easy_cleanup(curl);
-    //curl_slist_free_all(headers);
-
-    //// --- parse JSON ---
-    //JsonParser *parser = json_parser_new();
-    //GError *error = NULL;
-    //if (!json_parser_load_from_data(parser, chunk.memory, -1, &error)) {
-        //fprintf(stderr, "JSON parse error: %s\n", error->message);
-        //g_error_free(error);
-        //free(chunk.memory);
-        //g_object_unref(parser);
-        //free(order);
-        //return NULL;
-    //}
-
-    //JsonNode *root = json_parser_get_root(parser);
-    //JsonObject *root_obj = json_node_get_object(root);
-    //gboolean success = json_object_get_boolean_member(root_obj, "success");
-    //if (!success) {
-        //fprintf(stderr, "API returned failure\n");
-        //g_object_unref(parser);
-        //free(chunk.memory);
-        //free(order);
-        //return NULL;
-    //}
-
-    //JsonObject *order_obj = json_object_get_object_member(root_obj, "order");
-    //if (!order_obj) {
-        //g_object_unref(parser);
-        //free(chunk.memory);
-        //free(order);
-        //return NULL;
-    //}
-
-    //// --- เติมข้อมูลลง struct Order ---
-    //order->order_id = json_object_get_int_member(order_obj, "id");
-    //const char *line_name = json_object_get_string_member(order_obj, "line_name");
-    //const char *place = json_object_get_string_member(order_obj, "place");
-    //const char *delivery_time = json_object_get_string_member(order_obj, "delivery_time");
-    //const char *created_at = json_object_get_string_member(order_obj, "created_at");
-    //int cancelled = json_object_get_int_member(order_obj, "cancelled");
-
-    //strncpy(order->line_name, line_name ? line_name : "", sizeof(order->line_name)-1);
-    //strncpy(order->place, place ? place : "", sizeof(order->place)-1);
-    //strncpy(order->delivery_time, delivery_time ? delivery_time : "", sizeof(order->delivery_time)-1);
-    //strncpy(order->created_at, created_at ? created_at : "", sizeof(order->created_at)-1);
-    //order->cancelled = cancelled;
-
-    //// --- items ---
-    //JsonArray *items_array = json_object_get_array_member(order_obj, "items");
-    //order->item_count = 0;
-    //if (items_array) {
-        //int n = json_array_get_length(items_array);
-        //for (int i=0; i<n && i<50; i++) {
-            //JsonObject *item_obj = json_array_get_object_element(items_array, i);
-            //const char *item_name = json_object_get_string_member(item_obj, "item_name");
-            //int qty = json_object_get_int_member(item_obj, "qty");
-            //const char *price_str = json_object_get_string_member(item_obj, "price");
-            //double price = price_str ? atof(price_str) : 0.0;
-            //const char *option_text = NULL;
-            //option_text = json_object_get_string_member(item_obj, "option_text");
-
-            //strncpy(order->items[i].name, item_name ? item_name : "", sizeof(order->items[i].name)-1);
-            //strncpy(order->items[i].option_text, option_text, sizeof(order->items[i].option_text)-1);
-            //order->items[i].qty = qty;
-            //order->items[i].price = price;
-
-            //order->item_count++;
-        //}
-    //}
-
-    //g_object_unref(parser);
-    //free(chunk.memory);
-
-    //return order;
-//}
-
 Order *get_order_by_id(const char *api_base_url, const char *machine_name, const char *token, int order_id) {
     CURL *curl = curl_easy_init();
     if (!curl) return NULL;
@@ -1082,12 +927,23 @@ Order *get_order_by_id(const char *api_base_url, const char *machine_name, const
     return order;
 }
 
+// ตัวอย่าง callback
+void on_radio_toggled(GtkToggleButton *button, gpointer user_data) {
+    AppWidgets *app = (AppWidgets *)user_data;
+
+    if (gtk_toggle_button_get_active(button)) {
+        int monitor_id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "monitor-id"));
+        app->selected_monitor = monitor_id;
+        //g_print("เลือก monitor = %d\n", monitor_id);
+        refresh_data(app);
+    }
+}
 
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
 
     AppWidgets app;
-	app.filter_date[0] = '\0'; // เริ่มต้นเป็น empty string
+    app.filter_date[0] = '\0'; // เริ่มต้นเป็น empty string
     load_dotenv_to_struct(&app, ".env");
 
     app.selected_index = -1;
@@ -1132,14 +988,54 @@ int main(int argc, char *argv[]) {
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_cancel);
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_paid);
     
-        // ปุ่มเลือกวันที่
+    // ปุ่มเลือกวันที่
     GtkWidget *btn_calendar = gtk_button_new_from_icon_name("x-office-calendar", GTK_ICON_SIZE_BUTTON);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_calendar);
     g_signal_connect(btn_calendar, "clicked", G_CALLBACK(on_calendar_button_clicked), &app);
     
     app.lbl_filter_date = gtk_label_new("ส่งวันนี้");
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.lbl_filter_date);
+    
+    GtkWidget *sep = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
+    GtkWidget *label = gtk_label_new("Monitor:");
 
+    gtk_header_bar_pack_start (GTK_HEADER_BAR (header), sep);
+    gtk_header_bar_pack_start (GTK_HEADER_BAR (header), label);
+
+    // สร้าง radio buttons
+    GtkWidget *rb1 = gtk_radio_button_new_with_label(NULL, "1");
+    GtkWidget *rb2 = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(rb1), "2");
+    GtkWidget *rb3 = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(rb1), "3");
+
+    gtk_header_bar_pack_start (GTK_HEADER_BAR (header), rb1);
+    gtk_header_bar_pack_start (GTK_HEADER_BAR (header), rb2);
+    gtk_header_bar_pack_start (GTK_HEADER_BAR (header), rb3);
+
+   
+    // กำหนด monitor-id ให้ปุ่ม (ต้องใช้ GINT_TO_POINTER)
+    g_object_set_data(G_OBJECT(rb1), "monitor-id", GINT_TO_POINTER(1));
+    g_object_set_data(G_OBJECT(rb2), "monitor-id", GINT_TO_POINTER(2));
+    g_object_set_data(G_OBJECT(rb3), "monitor-id", GINT_TO_POINTER(3));
+
+    //printf("rb1=%p rb2=%p rb3=%p selected=%d\n", rb1, rb2, rb3, app.selected_monitor);
+
+    //g_signal_handlers_block_by_func(rb1, G_CALLBACK(on_radio_toggled), &app);
+    //g_signal_handlers_block_by_func(rb2, G_CALLBACK(on_radio_toggled), &app);
+    //g_signal_handlers_block_by_func(rb3, G_CALLBACK(on_radio_toggled), &app);
+    if (app.selected_monitor == 1) {
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rb1), TRUE);
+    } else if (app.selected_monitor == 2) {
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rb2), TRUE);
+    } else if (app.selected_monitor == 3) {
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rb3), TRUE);
+    }
+    //g_signal_handlers_unblock_by_func(rb2, G_CALLBACK(on_radio_toggled), &app);
+
+    // สามารถเชื่อม callback ได้ตามต้องการ
+    g_signal_connect(rb1, "toggled", G_CALLBACK(on_radio_toggled), &app);
+    g_signal_connect(rb2, "toggled", G_CALLBACK(on_radio_toggled), &app);
+    g_signal_connect(rb3, "toggled", G_CALLBACK(on_radio_toggled), &app);
+    
     app.clock_label = gtk_label_new("");
     gtk_widget_set_name(app.clock_label, "clock-label");
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.clock_label);

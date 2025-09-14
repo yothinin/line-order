@@ -26,7 +26,11 @@
 //// สร้าง PromptPay QR พร้อม Ref1 (order_id)
 //char* build_promptpay_qr(const char *phone, const char *amount, int order_id) {
     //char merchantInfo[128];
+    //char addData[32];
     //char payload[512];
+
+
+//char order_id_str[16];   // แปลงเลข order_id เป็น string
 
     //// แปลงเบอร์เป็น 0066XXXXXXXXX
     //char phoneProxy[32];
@@ -42,28 +46,24 @@
         //"0113%s", phoneProxy
     //);
 
-//char ref_str[16];
-//snprintf(ref_str, sizeof(ref_str), "%d", order_id); // "213"
-
-//// Ref1 subfield
-//char refField[24];
-//sprintf(refField, "07%02zu%s", strlen(ref_str), ref_str); // "0703213"
-
-//// Field 62
-//sprintf(payload,
-    //"000201"                  // Payload Format Indicator
-    //"010212"                  // Point of Initiation Method (dynamic)
-    //"29%02zu%s"               // Merchant Account Info
-    //"5802TH"                  // Country
-    //"5303764"                 // Currency THB
-    //"54%02zu%s"               // Amount
-    //"62%02zu%s"               // Additional Data Template
-    //"6304",                   // CRC placeholder
-    //strlen(merchantInfo), merchantInfo,
-    //strlen(amount), amount,
-    //(size_t)(1 + 1 + strlen(ref_str)), refField // len62 = 1+1+3 = 5
-//);
-
+    //sprintf(order_id_str, "%d", order_id);   // order_id เป็น int
+    //// สร้าง Ref1
+    //sprintf(addData, "05%02zu%s", strlen(order_id_str), order_id_str);
+    
+    //// สร้าง payload (ยังไม่รวม CRC)
+    //sprintf(payload,
+        //"000201"              // Payload Format Indicator
+        //"010212"              // Point of Initiation Method (12 = dynamic)
+        //"29%02zu%s"           // Merchant Account Info
+        //"5802TH"              // Country Code
+        //"5303764"             // Currency THB
+        //"54%02zu%s"           // Amount
+        //"62%02zu%s"           // Additional Data Template
+        //"6304",               // CRC placeholder
+        //strlen(merchantInfo), merchantInfo,
+        //strlen(amount), amount,
+        //strlen(addData), addData
+    //);
 
     //uint16_t crc = crc16_ccitt(payload, strlen(payload));
 

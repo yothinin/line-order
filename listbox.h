@@ -65,6 +65,7 @@ typedef struct {
     GtkWidget *btn_paid;
     gint selected_index;
     gint selected_order_id;
+    gint selected_monitor;
 
     char machine_name[128];
     char token[128];
