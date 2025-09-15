@@ -1,4 +1,6 @@
 #include "listbox.h"
+#include "screenfade.h"
+#include "clock.h"
 #include <gtk/gtk.h>
 #include <json-glib/json-glib.h>
 #include <curl/curl.h>
@@ -1046,8 +1048,8 @@ int main(int argc, char *argv[]) {
     app.clock_label = gtk_label_new("");
     gtk_widget_set_name(app.clock_label, "clock-label");
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.clock_label);
-    update_clock(&app);
-    g_timeout_add_seconds(1, update_clock, &app);
+    //update_clock(&app);
+    //g_timeout_add_seconds(1, update_clock, &app);
 
     // ScrolledWindow + ListBox
     app.scrolled = gtk_scrolled_window_new(NULL, NULL);
@@ -1076,6 +1078,7 @@ if (theme_name && g_str_has_suffix(theme_name, "-dark")) {
 
 const char *clock_color = dark_header ? "#FFFFFF" : "#000000";
 g_print ("clock color: %s\n", clock_color);
+start_clock_thread(GTK_LABEL(app.clock_label));
 
 
 snprintf(buffer, sizeof(buffer),
@@ -1111,6 +1114,10 @@ gtk_css_provider_load_from_data(css_provider, css_data, -1, &css_error);
     g_timeout_add(5000, refresh_data_timeout, &app);
 
     gtk_widget_show_all(app.window);
+    
+    setup_auto_screen_fade(GTK_WINDOW(app.window), 3600000);
+
+
     gtk_main();
 
     return 0;
