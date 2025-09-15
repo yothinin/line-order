@@ -10,6 +10,13 @@
 const char *STATUS_NAMES[]  = {"รับออเดอร์","กำลังทำอาหาร","กำลังจัดส่ง","จัดส่งแล้ว","ชำระเงินแล้ว"};
 const char *STATUS_COLORS[] = {"green","orange","red","blue","purple"};
 
+gboolean is_dark_theme() {
+    GtkSettings *settings = gtk_settings_get_default();
+    gboolean dark_theme = FALSE;
+    g_object_get(settings, "gtk-application-prefer-dark-theme", &dark_theme, NULL);
+    return dark_theme;
+}
+
 static void set_field(char *dest, size_t size, const char *value) {
     strncpy(dest, value, size - 1);
     dest[size - 1] = '\0';
@@ -1051,23 +1058,45 @@ int main(int argc, char *argv[]) {
     gtk_container_add(GTK_CONTAINER(app.scrolled), app.listbox);
 
     // CSS
-    GtkCssProvider *css = gtk_css_provider_new();
-    GError *css_error = NULL;
-    gtk_css_provider_load_from_data(css,
-        "window, scrolledwindow, viewport, list box { background-color: #000000; }"
-        "list row { background-color: #000000; }"
-        "list row label { color: #666666; font-size: 48px; padding: 10px; }"
-        "list row:selected { background-color: #333333; }"
-        "list row:selected label { color: #ffffff; font-size: 48px; }"
-        "#clock-label { color: #000000; font-size: 64px; font-weight: bold; }",  // นาฬิกาใหญ่
-        -1, &css_error);
-        
+GtkCssProvider *css_provider = gtk_css_provider_new();
+GError *css_error = NULL;
+    
+const char *css_data;
+char buffer[1024];
+
+
+GtkSettings *settings = gtk_settings_get_default();
+gchar *theme_name = NULL;
+g_object_get(settings, "gtk-theme-name", &theme_name, NULL);
+
+gboolean dark_header = FALSE;
+if (theme_name && g_str_has_suffix(theme_name, "-dark")) {
+    dark_header = TRUE;
+}
+
+const char *clock_color = dark_header ? "#FFFFFF" : "#000000";
+g_print ("clock color: %s\n", clock_color);
+
+
+snprintf(buffer, sizeof(buffer),
+    "window, scrolledwindow, viewport, list box { background-color: #000000; }"
+    "list row { background-color: #000000; }"
+    "list row label { color: #666666; font-size: 48px; padding: 10px; }"
+    "list row:selected { background-color: #333333; }"
+    "list row:selected label { color: #ffffff; font-size: 48px; }"
+    "#clock-label { color: %s; font-size: 64px; font-weight: bold; }",
+    clock_color);
+
+css_data = buffer;
+
+gtk_css_provider_load_from_data(css_provider, css_data, -1, &css_error);
+
     if(css_error) {
         g_printerr("CSS error: %s\n", css_error->message);
         g_error_free(css_error);
     }
     gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
-        GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        GTK_STYLE_PROVIDER(css_provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
     g_signal_connect(app.btn_do, "clicked", G_CALLBACK(btn_do_clicked_cb), &app);
     g_signal_connect(app.btn_done, "clicked", G_CALLBACK(btn_done_clicked_cb), &app);
