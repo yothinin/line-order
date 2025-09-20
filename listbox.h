@@ -79,7 +79,7 @@ typedef struct {
     GtkWidget *lbl_filter_date;
     GtkWidget *header_bar; // ถ้ายังไม่มี HeaderBar
     int font_size;               // 🔹 เพิ่มตรงนี้
-
+    int first_populate_done;
 
 } AppWidgets;
 
@@ -122,5 +122,6 @@ void on_cancel_done(GTask *task, gpointer source_object, gpointer task_data, GCa
 void btn_paid_clicked_cb(GtkButton *button, gpointer user_data);
 void print_slip_fullxxx(Order *order);
 Order *get_order_by_id(const char *api_base_url, const char *machine_name, const char *token, int order_id);
+gpointer refresh_data_thread(gpointer user_data);
 
 #endif // LISTBOX_H
