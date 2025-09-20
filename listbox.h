@@ -60,6 +60,8 @@ typedef struct {
     GtkWidget *scrolled;
     GtkWidget *btn_do;
     GtkWidget *btn_done;
+    GtkWidget *btn_up;     // 🔹 เพิ่ม
+    GtkWidget *btn_down;   // 🔹 เพิ่ม
     GtkWidget *btn_cancel;
     GtkWidget *clock_label;
     GtkWidget *btn_paid;
@@ -76,6 +78,8 @@ typedef struct {
     GtkWidget *btn_calendar;
     GtkWidget *lbl_filter_date;
     GtkWidget *header_bar; // ถ้ายังไม่มี HeaderBar
+    int font_size;               // 🔹 เพิ่มตรงนี้
+
 
 } AppWidgets;
 

@@ -1,5 +1,6 @@
 #include "listbox.h"
 #include "screenfade.h"
+#include "udp_listen.h"
 #include "clock.h"
 #include <gtk/gtk.h>
 #include <json-glib/json-glib.h>
@@ -9,8 +10,67 @@
 #include <time.h>
 #include "slip.h"
 
+AppWidgets app;
+GtkWidget *g_window = NULL;
+GtkLabel  *g_clock_label = NULL;
+
 const char *STATUS_NAMES[]  = {"รับออเดอร์","กำลังทำอาหาร","กำลังจัดส่ง","จัดส่งแล้ว","ชำระเงินแล้ว"};
 const char *STATUS_COLORS[] = {"green","orange","red","blue","purple"};
+
+void update_css() {
+    // ตรวจสอบธีม
+    GtkSettings *settings = gtk_settings_get_default();
+    gchar *theme_name = NULL;
+    g_object_get(settings, "gtk-theme-name", &theme_name, NULL);
+    gboolean dark_header = FALSE;
+    if (theme_name && g_str_has_suffix(theme_name, "-dark")) {
+        dark_header = TRUE;
+    }
+    const char *clock_color = dark_header ? "#FFFFFF" : "#000000";
+
+    char buffer[1024];
+    snprintf(buffer, sizeof(buffer),
+        "window, scrolledwindow, viewport, list box { background-color: #000000; }"
+        "list row { background-color: #000000; }"
+        "list row label { color: #666666; font-size: %dpx; padding: 10px; }"
+        "list row:selected { background-color: #333333; }"
+        "list row:selected label { color: #ffffff; font-size: %dpx; }"
+        "list row label.status-1 { color: yellow; font-size: %dpx; }"
+        "#clock-label { color: %s; font-size: 64px; font-weight: bold; }",
+        app.font_size, app.font_size, app.font_size, clock_color);
+
+    GtkCssProvider *css_provider = gtk_css_provider_new();
+    GError *css_error = NULL;
+    gtk_css_provider_load_from_data(css_provider, buffer, -1, &css_error);
+    if (css_error) {
+        g_warning("CSS error: %s", css_error->message);
+        g_error_free(css_error);
+    }
+    gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
+                                              GTK_STYLE_PROVIDER(css_provider),
+                                              GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(css_provider);
+}
+
+
+
+
+// ✅ ปุ่ม A+
+static void on_increase_clicked(GtkWidget *button, gpointer user_data) {
+    if (app.font_size < 54) {
+        app.font_size += 2;
+        update_css();
+    }
+}
+
+// ✅ ปุ่ม A-
+static void on_decrease_clicked(GtkWidget *button, gpointer user_data) {
+    if (app.font_size > 16) {
+        app.font_size -= 2;
+        update_css();
+    }
+}
+
 
 gboolean is_dark_theme() {
     GtkSettings *settings = gtk_settings_get_default();
@@ -51,6 +111,12 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
             set_field(app->api_base_url, sizeof(app->api_base_url), value);
         else if (strcmp(key, "MONITOR") == 0)
             app->selected_monitor = atoi(value);  // แปลงค่าเป็น int
+        else if (strcmp(key, "LISTBOX_FONT_SIZE") == 0) {
+            int fs = atoi(value);
+            if (fs < 14) fs = 14;
+            if (fs > 54) fs = 54;
+            app->font_size = fs;   // 🔹 เพิ่มตรงนี้
+          }
     }
  
     fclose(f);
@@ -174,7 +240,6 @@ void update_order_canceled(AppWidgets *app, int order_id, int canceled) {
     curl_easy_cleanup(curl);
 }
 
-// ตัวอย่าง populate_listbox
 void populate_listbox(AppWidgets *app, const gchar *json_data) {
     gtk_list_box_unselect_all(GTK_LIST_BOX(app->listbox));
     GError *error = NULL;
@@ -200,9 +265,7 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
         JsonObject *order = json_array_get_object_element(orders, i);
         gint id = json_object_get_int_member(order, "id");
         const gchar *line_name = json_object_get_string_member(order, "line_name");
-        
         const gchar *line_id = json_object_get_string_member(order, "line_id");
-
         const gchar *place = json_object_get_string_member(order, "place");
         const gchar *delivery_time = json_object_get_string_member(order, "delivery_time");
         gint status = json_object_get_int_member(order, "status");
@@ -244,11 +307,16 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
         gtk_label_set_yalign(GTK_LABEL(label), 0.5);
         gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
 
+        // 🔹 ใส่ class ถ้า status == 1
+        if (status == 1) {
+            GtkStyleContext *ctx = gtk_widget_get_style_context(label);
+            gtk_style_context_add_class(ctx, "status-1");
+        }
+
         GtkWidget *row = gtk_list_box_row_new();
         g_object_set_data(G_OBJECT(row), "status", GINT_TO_POINTER(status));
 
         gtk_container_add(GTK_CONTAINER(row), label);
-
         g_object_set_data_full(G_OBJECT(row), "line_id", g_strdup(line_id), g_free);
 
         gtk_list_box_insert(GTK_LIST_BOX(app->listbox), row, i);
@@ -268,36 +336,6 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
     g_object_unref(parser);
 }
 
-
-//void refresh_data(AppWidgets *app) {
-    //char date_str[11] = {0};   // init ให้ null-terminated ตั้งแต่แรก
-
-    //// ถ้ามี filter_date ใช้ค่า ถ้าไม่ใช้วันปัจจุบัน
-    //if (strlen(app->filter_date) > 0) {
-        //strncpy(date_str, app->filter_date, sizeof(date_str) - 1);
-        //date_str[sizeof(date_str) - 1] = '\0';
-        //date_str[strcspn(date_str, "\r\n")] = '\0'; // ตัด newline เผื่อมี
-    //} else {
-        //time_t t = time(NULL);
-        //struct tm tm_now;
-        //localtime_r(&t, &tm_now);
-        //strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
-    //}
-
-    //char url[1024];
-    //snprintf(url, sizeof(url),
-             //"%s/api/store/orders?date=%s",
-             //app->api_base_url, date_str);
-
-////    printf("🔍 Final fetch URL = [%s]\n", url); // debug
-
-    //gchar *json_data = fetch_orders_json(url);
-    //if(json_data) {
-        //populate_listbox(app, json_data);
-        //free(json_data);
-        //select_first_row(app);
-    //}
-//}
 
 void refresh_data(AppWidgets *app) {
     char date_str[11] = {0};
@@ -323,7 +361,7 @@ void refresh_data(AppWidgets *app) {
     if (json_data) {
         populate_listbox(app, json_data);
         free(json_data);
-        select_first_row(app);
+        ////select_first_row(app);
     }
 }
 
@@ -348,6 +386,12 @@ void refocus_selected_row(AppWidgets *app) {
 // callback ปุ่ม "ทำรายการ"
 void btn_do_clicked_cb(GtkButton *button, gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
+    
+    // ✅ ถ้าปุ่มถูก disable อยู่ ให้ return เลย
+    if (!gtk_widget_get_sensitive(GTK_WIDGET(app->btn_do))) {
+        g_print("btnDo ถูกปิดการใช้งานแล้ว ข้ามคำสั่ง do\n");
+        return;
+    }
 
     if(app->selected_index < 0) return;
 
@@ -951,10 +995,9 @@ void on_radio_toggled(GtkToggleButton *button, gpointer user_data) {
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
 
-    AppWidgets app;
     app.filter_date[0] = '\0'; // เริ่มต้นเป็น empty string
     load_dotenv_to_struct(&app, ".env");
-
+    
     app.selected_index = -1;
 
     app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -986,13 +1029,13 @@ int main(int argc, char *argv[]) {
     GtkStyleContext *context = gtk_widget_get_style_context(app.btn_paid);
     gtk_style_context_add_class(context, "suggested-action"); // หรือใช้ "destructive-action" ตามต้องการ
 
-    GtkWidget *btn_up = gtk_button_new_from_icon_name("go-up-symbolic", GTK_ICON_SIZE_DIALOG);
-    GtkWidget *btn_down = gtk_button_new_from_icon_name("go-down-symbolic", GTK_ICON_SIZE_DIALOG);
+    app.btn_up = gtk_button_new_from_icon_name("go-up-symbolic", GTK_ICON_SIZE_DIALOG);
+    app.btn_down = gtk_button_new_from_icon_name("go-down-symbolic", GTK_ICON_SIZE_DIALOG);
 
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.btn_do);
     gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.btn_done);
-    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_up);
-    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_down);
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.btn_up);
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), app.btn_down);
 
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_cancel);
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.btn_paid);
@@ -1026,11 +1069,6 @@ int main(int argc, char *argv[]) {
     g_object_set_data(G_OBJECT(rb2), "monitor-id", GINT_TO_POINTER(2));
     g_object_set_data(G_OBJECT(rb3), "monitor-id", GINT_TO_POINTER(3));
 
-    //printf("rb1=%p rb2=%p rb3=%p selected=%d\n", rb1, rb2, rb3, app.selected_monitor);
-
-    //g_signal_handlers_block_by_func(rb1, G_CALLBACK(on_radio_toggled), &app);
-    //g_signal_handlers_block_by_func(rb2, G_CALLBACK(on_radio_toggled), &app);
-    //g_signal_handlers_block_by_func(rb3, G_CALLBACK(on_radio_toggled), &app);
     if (app.selected_monitor == 1) {
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(rb1), TRUE);
     } else if (app.selected_monitor == 2) {
@@ -1045,11 +1083,9 @@ int main(int argc, char *argv[]) {
     g_signal_connect(rb2, "toggled", G_CALLBACK(on_radio_toggled), &app);
     g_signal_connect(rb3, "toggled", G_CALLBACK(on_radio_toggled), &app);
     
-    app.clock_label = gtk_label_new("");
+    app.clock_label = gtk_label_new("00:00:00");
     gtk_widget_set_name(app.clock_label, "clock-label");
     gtk_header_bar_pack_end(GTK_HEADER_BAR(header), app.clock_label);
-    //update_clock(&app);
-    //g_timeout_add_seconds(1, update_clock, &app);
 
     // ScrolledWindow + ListBox
     app.scrolled = gtk_scrolled_window_new(NULL, NULL);
@@ -1058,54 +1094,21 @@ int main(int argc, char *argv[]) {
 
     app.listbox = gtk_list_box_new();
     gtk_container_add(GTK_CONTAINER(app.scrolled), app.listbox);
+       
+    update_css(app.window, app.clock_label);
+       
+    GtkWidget *btn_inc = gtk_button_new_with_label("A+");
+    g_signal_connect(btn_inc, "clicked", G_CALLBACK(on_increase_clicked), app.listbox);
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), btn_inc);
 
-    // CSS
-GtkCssProvider *css_provider = gtk_css_provider_new();
-GError *css_error = NULL;
-    
-const char *css_data;
-char buffer[1024];
-
-
-GtkSettings *settings = gtk_settings_get_default();
-gchar *theme_name = NULL;
-g_object_get(settings, "gtk-theme-name", &theme_name, NULL);
-
-gboolean dark_header = FALSE;
-if (theme_name && g_str_has_suffix(theme_name, "-dark")) {
-    dark_header = TRUE;
-}
-
-const char *clock_color = dark_header ? "#FFFFFF" : "#000000";
-g_print ("clock color: %s\n", clock_color);
-start_clock_thread(GTK_LABEL(app.clock_label));
-
-
-snprintf(buffer, sizeof(buffer),
-    "window, scrolledwindow, viewport, list box { background-color: #000000; }"
-    "list row { background-color: #000000; }"
-    "list row label { color: #666666; font-size: 48px; padding: 10px; }"
-    "list row:selected { background-color: #333333; }"
-    "list row:selected label { color: #ffffff; font-size: 48px; }"
-    "#clock-label { color: %s; font-size: 64px; font-weight: bold; }",
-    clock_color);
-
-css_data = buffer;
-
-gtk_css_provider_load_from_data(css_provider, css_data, -1, &css_error);
-
-    if(css_error) {
-        g_printerr("CSS error: %s\n", css_error->message);
-        g_error_free(css_error);
-    }
-    gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
-        GTK_STYLE_PROVIDER(css_provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    GtkWidget *btn_dec = gtk_button_new_with_label("A-");
+    g_signal_connect(btn_dec, "clicked", G_CALLBACK(on_decrease_clicked), app.listbox);
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(header), btn_dec);
 
     g_signal_connect(app.btn_do, "clicked", G_CALLBACK(btn_do_clicked_cb), &app);
     g_signal_connect(app.btn_done, "clicked", G_CALLBACK(btn_done_clicked_cb), &app);
-    g_signal_connect(btn_up, "clicked", G_CALLBACK(scroll_listbox_up_cb), &app);
-    g_signal_connect(btn_down, "clicked", G_CALLBACK(scroll_listbox_down_cb), &app);
-    //g_signal_connect(app.btn_paid, "clicked", G_CALLBACK(on_btn_paid_clicked), &app);
+    g_signal_connect(app.btn_up, "clicked", G_CALLBACK(scroll_listbox_up_cb), &app);
+    g_signal_connect(app.btn_down, "clicked", G_CALLBACK(scroll_listbox_down_cb), &app);
     g_signal_connect(app.btn_paid, "clicked", G_CALLBACK(btn_paid_clicked_cb), &app);
     g_signal_connect(app.btn_cancel, "clicked", G_CALLBACK(btn_cancel_clicked_cb), &app);
     g_signal_connect(app.listbox, "row-selected", G_CALLBACK(on_row_selected), &app);
@@ -1115,8 +1118,12 @@ gtk_css_provider_load_from_data(css_provider, css_data, -1, &css_error);
 
     gtk_widget_show_all(app.window);
     
-    setup_auto_screen_fade(GTK_WINDOW(app.window), 3600000);
+    // เรียก update_clock ทุกวินาที
+    update_clock(&app); // เริ่มต้นเรียกเลย
+    g_timeout_add_seconds(1, update_clock, &app); // เรียกซ้ำทุก 1 วินาที
 
+    start_udp_listener(&app);
+    setup_auto_screen_fade(GTK_WINDOW(app.window), 3600000);
 
     gtk_main();
 
