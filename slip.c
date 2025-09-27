@@ -1,3 +1,4 @@
+#include "utf8_conv.h"
 #include "slip.h"
 #include "qrpayment.h"
 #include <stdio.h>

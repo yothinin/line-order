@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <time.h>
 
+
 #define PAPER_WIDTH_MM 80
 #define DPI 203 // thermal printer ส่วนมาก ~203 dpi
 #define PAPER_WIDTH_PX ((PAPER_WIDTH_MM/25.4)*DPI)
@@ -82,6 +83,9 @@ typedef struct {
     char print_method[16];    // cups หรือ direct
     char printer_name[128];   // สำหรับ CUPS
     char printer_device[128]; // สำหรับ Direct
+        // เพิ่มส่วนนี้
+    char line_id[128];
+    char selected_date[11]; // YYYY-MM-DD
 
 } AppWidgets;
 

@@ -2,6 +2,7 @@
 #include "screenfade.h"
 #include "udp_listen.h"
 #include "clock.h"
+#include "order_summary.h"
 #include <gtk/gtk.h>
 #include <json-glib/json-glib.h>
 #include <curl/curl.h>
@@ -120,6 +121,8 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
             set_field(app->token, sizeof(app->token), value);
         else if (strcmp(key, "API_BASE_URL") == 0)
             set_field(app->api_base_url, sizeof(app->api_base_url), value);
+        else if (strcmp(key, "LINE_ADMIN") == 0)
+            set_field(app->line_id, sizeof(app->line_id), value);
         else if (strcmp(key, "MONITOR") == 0)
             app->selected_monitor = atoi(value);  // แปลงค่าเป็น int
         else if (strcmp(key, "PRINT_METHOD") == 0)
@@ -135,6 +138,7 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
             app->font_size = fs;   // 🔹 เพิ่มตรงนี้
           }
     }
+    
  
     fclose(f);
 }
@@ -1067,9 +1071,15 @@ void on_calendar_button_clicked(GtkButton *button, gpointer user_data) {
         guint year, month, day;
         gtk_calendar_get_date(GTK_CALENDAR(calendar), &year, &month, &day);
 
-        // month ใน GtkCalendar เริ่มที่ 0 → ต้อง +1
+        //// month ใน GtkCalendar เริ่มที่ 0 → ต้อง +1
+        //snprintf(app->filter_date, sizeof(app->filter_date),
+                 //"%04d-%02d-%02d", year, month + 1, day);
+
+        // เก็บวันที่ลง filter_date และ selected_date พร้อมกัน
         snprintf(app->filter_date, sizeof(app->filter_date),
-                 "%04d-%02d-%02d", year, month + 1, day);
+                 "%04d-%02d-%02d", year, month+1, day);
+        snprintf(app->selected_date, sizeof(app->selected_date),
+                 "%04d-%02d-%02d", year, month+1, day);
 
         gtk_label_set_text(GTK_LABEL(app->lbl_filter_date), app->filter_date);
 
@@ -1230,6 +1240,22 @@ int main(int argc, char *argv[]) {
     app.filter_date[0] = '\0'; // เริ่มต้นเป็น empty string
     load_dotenv_to_struct(&app, ".env");
     
+    g_print("Loaded API_BASE_URL: %s\n", app.api_base_url);
+    g_print ("print device: %s\n", app.printer_device);
+
+    
+        // ตั้งวันที่ปัจจุบันเป็นค่าเริ่มต้น
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+
+    snprintf(app.filter_date, sizeof(app.filter_date),
+             "%04d-%02d-%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+
+    snprintf(app.selected_date, sizeof(app.selected_date),
+             "%04d-%02d-%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+
+
+    
     app.selected_index = -1;
 
     app.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -1317,6 +1343,11 @@ int main(int argc, char *argv[]) {
     g_signal_connect(rb1, "toggled", G_CALLBACK(on_radio_toggled), &app);
     g_signal_connect(rb2, "toggled", G_CALLBACK(on_radio_toggled), &app);
     g_signal_connect(rb3, "toggled", G_CALLBACK(on_radio_toggled), &app);
+    
+    // สร้างปุ่ม "สรุปยอด"
+    GtkWidget *btn_summary = gtk_button_new_with_label("📊 สรุปยอด");
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header), btn_summary);
+    g_signal_connect(btn_summary, "clicked", G_CALLBACK(show_order_summary), &app);
     
     app.clock_label = gtk_label_new("00:00:00");
     gtk_widget_set_name(app.clock_label, "clock-label");
