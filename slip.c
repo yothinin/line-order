@@ -1,593 +1,714 @@
-//#include "slip.h"
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
-//#include <cairo.h>
-//#include <pango/pangocairo.h>
-//#include <qrencode.h>
-//#include <ctype.h>
-//#include <stdint.h>
-
-//// คำนวณ CRC16-CCITT (poly=0x1021, init=0xFFFF)
-//uint16_t crc16_ccitt(const char *data, size_t length) {
-    //uint16_t crc = 0xFFFF;
-    //for (size_t i = 0; i < length; i++) {
-        //crc ^= (uint8_t)data[i] << 8;
-        //for (int j = 0; j < 8; j++) {
-            //if (crc & 0x8000)
-                //crc = (crc << 1) ^ 0x1021;
-            //else
-                //crc <<= 1;
-        //}
-    //}
-    //return crc & 0xFFFF;
-//}
-
-//// สร้าง PromptPay QR พร้อม Ref1 (order_id)
-//char* build_promptpay_qr(const char *phone, const char *amount, int order_id) {
-    //char merchantInfo[128];
-    //char addData[32];
-    //char payload[512];
-
-
-//char order_id_str[16];   // แปลงเลข order_id เป็น string
-
-    //// แปลงเบอร์เป็น 0066XXXXXXXXX
-    //char phoneProxy[32];
-    //if (phone[0] == '0') {
-        //sprintf(phoneProxy, "0066%s", phone + 1);
-    //} else {
-        //sprintf(phoneProxy, "0066%s", phone);
-    //}
-
-    //// Merchant Account Information (ID 29)
-    //sprintf(merchantInfo,
-        //"0016A000000677010111"
-        //"0113%s", phoneProxy
-    //);
-
-    //sprintf(order_id_str, "%d", order_id);   // order_id เป็น int
-    //// สร้าง Ref1
-    //sprintf(addData, "05%02zu%s", strlen(order_id_str), order_id_str);
-    
-    //// สร้าง payload (ยังไม่รวม CRC)
-    //sprintf(payload,
-        //"000201"              // Payload Format Indicator
-        //"010212"              // Point of Initiation Method (12 = dynamic)
-        //"29%02zu%s"           // Merchant Account Info
-        //"5802TH"              // Country Code
-        //"5303764"             // Currency THB
-        //"54%02zu%s"           // Amount
-        //"62%02zu%s"           // Additional Data Template
-        //"6304",               // CRC placeholder
-        //strlen(merchantInfo), merchantInfo,
-        //strlen(amount), amount,
-        //strlen(addData), addData
-    //);
-
-    //uint16_t crc = crc16_ccitt(payload, strlen(payload));
-
-    //char *output = (char*)malloc(strlen(payload) + 5);
-    //if (!output) return NULL;
-
-    //sprintf(output, "%s%04X", payload, crc);
-    //return output;
-//}
-
-//// ---------------- Draw Text -----------------
-//void draw_text(PangoLayout *layout, cairo_t *cr, int x, int *y, const char *text, int font_size, int bold) {
-    //pango_layout_set_text(layout, text, -1);
-    //char font_desc[64];
-    //snprintf(font_desc, sizeof(font_desc), "%s %d", bold ? "Noto Sans Thai Bold" : "Noto Sans Thai", font_size);
-    //PangoFontDescription *desc = pango_font_description_from_string(font_desc);
-    //pango_layout_set_font_description(layout, desc);
-    //pango_font_description_free(desc);
-
-    //cairo_set_source_rgb(cr, 0, 0, 0);
-    //cairo_move_to(cr, x, *y);
-    //pango_cairo_show_layout(cr, layout);
-
-    //int height;
-    //pango_layout_get_pixel_size(layout, NULL, &height);
-    //*y += height + 5;
-//}
-
-//void draw_center_text(PangoLayout *layout, cairo_t *cr, int surface_width, int *y,
-                      //const char *text, int font_size, int bold) {
-    //pango_layout_set_text(layout, text, -1);
-    //char font_desc[64];
-    //snprintf(font_desc, sizeof(font_desc), "%s %d",
-             //bold ? "Noto Sans Thai Bold" : "Noto Sans Thai", font_size);
-    //PangoFontDescription *desc = pango_font_description_from_string(font_desc);
-    //pango_layout_set_font_description(layout, desc);
-    //pango_font_description_free(desc);
-
-    //int width, height;
-    //pango_layout_get_pixel_size(layout, &width, &height);
-    //int x = (surface_width - width) / 2;
-
-    //cairo_set_source_rgb(cr, 0, 0, 0);
-    //cairo_move_to(cr, x, *y);
-    //pango_cairo_show_layout(cr, layout);
-
-    //*y += height + 5;
-//}
-
-//// ---------------- Print Slip -----------------
-//void print_slip_full(Order *order) {
-    //if (!order) return;
-
-    //int surface_width = 400;
-    //int y = 10;
-    //char buf[256];
-
-    //// วัดขนาด
-    //cairo_surface_t *rec_surface = cairo_recording_surface_create(CAIRO_CONTENT_COLOR_ALPHA, NULL);
-    //cairo_t *rec_cr = cairo_create(rec_surface);
-    //PangoLayout *layout = pango_cairo_create_layout(rec_cr);
-
-    //snprintf(buf, sizeof(buf), "ออเดอร์ #%d", order->order_id);
-    //draw_text(layout, rec_cr, 10, &y, buf, 18, 1);
-    //snprintf(buf, sizeof(buf), "ลูกค้า: %s", order->line_name);
-    //draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
-    //snprintf(buf, sizeof(buf), "สถานที่ส่ง: %s", order->place);
-    //draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
-    //snprintf(buf, sizeof(buf), "เวลาส่ง: %s", order->delivery_time);
-    //draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
-    //snprintf(buf, sizeof(buf), "สถานะ: %s", order->statusText);
-    //draw_text(layout, rec_cr, 10, &y, buf, 16, 1);
-    //snprintf(buf, sizeof(buf), "วันที่สั่ง: %s", order->created_at);
-    //draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
-
-    //draw_text(layout, rec_cr, 10, &y, "รายการ:", 16, 1);
-    //double totalAmount = 0;
-
-    //for (int i = 0; i < order->item_count; i++) {
-        //snprintf(buf, sizeof(buf), "- %s %d x %.2f", 
-                 //order->items[i].name, order->items[i].qty, order->items[i].price);
-        //draw_text(layout, rec_cr, 20, &y, buf, 16, 0);
-        //totalAmount += order->items[i].price * order->items[i].qty;
-
-        //if (strlen(order->items[i].option_text) > 0) {
-            //snprintf(buf, sizeof(buf), "(%s)", order->items[i].option_text);
-            //draw_text(layout, rec_cr, 40, &y, buf, 12, 0);
-        //}
-    //}
-
-    //snprintf(buf, sizeof(buf), "รวมทั้งหมด: %.2f บาท", totalAmount);
-    //draw_text(layout, rec_cr, 10, &y, buf, 16, 1);
-
-    //cairo_destroy(rec_cr);
-    //cairo_surface_destroy(rec_surface);
-    //g_object_unref(layout);
-
-    //// Render จริง
-    //cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, surface_width, y + 150);
-    //cairo_t *cr = cairo_create(surface);
-    //layout = pango_cairo_create_layout(cr);
-
-    //cairo_set_source_rgb(cr, 1,1,1);
-    //cairo_paint(cr);
-
-    //y = 10;
-    //snprintf(buf, sizeof(buf), "ออเดอร์ #%d", order->order_id);
-    //draw_text(layout, cr, 10, &y, buf, 18, 1);
-    //snprintf(buf, sizeof(buf), "ลูกค้า: %s", order->line_name);
-    //draw_text(layout, cr, 10, &y, buf, 16, 0);
-    //snprintf(buf, sizeof(buf), "สถานที่ส่ง: %s", order->place);
-    //draw_text(layout, cr, 10, &y, buf, 16, 0);
-    //snprintf(buf, sizeof(buf), "เวลาส่ง: %s", order->delivery_time);
-    //draw_text(layout, cr, 10, &y, buf, 16, 0);
-    //snprintf(buf, sizeof(buf), "วันที่สั่ง: %s", order->created_at);
-    //draw_text(layout, cr, 10, &y, buf, 16, 0);
-
-    //draw_text(layout, cr, 10, &y, "รายการ:", 16, 1);
-    //totalAmount = 0;
-    //for (int i = 0; i < order->item_count; i++) {
-        //snprintf(buf, sizeof(buf), "- %s %d x %.2f", 
-                 //order->items[i].name, order->items[i].qty, order->items[i].price);
-        //draw_text(layout, cr, 20, &y, buf, 16, 0);
-        //totalAmount += order->items[i].price * order->items[i].qty;
-
-        //if (strlen(order->items[i].option_text) > 0) {
-            //snprintf(buf, sizeof(buf), "(%s)", order->items[i].option_text);
-            //draw_text(layout, cr, 40, &y, buf, 12, 0);
-        //}
-    //}
-    //snprintf(buf, sizeof(buf), "รวมทั้งหมด: %.2f บาท", totalAmount);
-    //draw_text(layout, cr, 10, &y, buf, 16, 1);
-
-    //// -------- QR PromptPay (กลางล่าง) --------
-    //char amount_str[16]="";
-    //if(totalAmount>0) snprintf(amount_str,sizeof(amount_str),"%.2f",totalAmount);
-
-    //char *qrdata = build_promptpay_qr("0944574687", amount_str, order->order_id);
-    //if (!qrdata) {
-        //fprintf(stderr, "Failed to build QR data\n");
-        //return;
-    //}
-
-    //y += 20;
-
-    //QRcode *qrcode = QRcode_encodeString(qrdata, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
-    //free(qrdata);
-
-    //int scale = 4;
-    //int qr_margin = 4;
-
-    //if (qrcode) {
-        //int qr_draw_size = (qrcode->width + 2*qr_margin) * scale;
-        //int qr_x = (surface_width - qr_draw_size)/2;
-        //int qr_y = y;
-
-        //cairo_set_source_rgb(cr, 1,1,1);
-        //cairo_rectangle(cr, qr_x, qr_y, qr_draw_size, qr_draw_size);
-        //cairo_fill(cr);
-
-        //cairo_save(cr);
-        //cairo_translate(cr, qr_x + qr_margin*scale, qr_y + qr_margin*scale);
-        //cairo_set_source_rgb(cr, 0,0,0);
-        //for (int yy = 0; yy < qrcode->width; yy++)
-            //for (int xx = 0; xx < qrcode->width; xx++)
-                //if (qrcode->data[yy * qrcode->width + xx] & 1)
-                    //cairo_rectangle(cr, xx*scale, yy*scale, scale, scale);
-        //cairo_fill(cr);
-        //cairo_restore(cr);
-
-        //QRcode_free(qrcode);
-        //y = qr_y + qr_draw_size;
-    //}
-
-    //char buf2[128];
-    //snprintf(buf2, sizeof(buf2), "%s", "0944574687");
-    //draw_center_text(layout, cr, surface_width, &y, buf2, 14, 0);
-
-    //y += 10;
-
-    //snprintf(buf2, sizeof(buf2), "%s", "บัญชี: โยธิน อินบรรเลง");
-    //draw_center_text(layout, cr, surface_width, &y, buf2, 14, 0);
-
-    //// -------- เขียน PNG --------
-    //cairo_surface_write_to_png(surface, "/tmp/slip.png");
-
-    //cairo_destroy(cr);
-    //cairo_surface_destroy(surface);
-    //g_object_unref(layout);
-
-    //printf("✅ สลิปสร้างเสร็จแล้ว: /tmp/slip.png\n");
-//}
-
-
 #include "slip.h"
+#include "qrpayment.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <cairo.h>
-#include <pango/pangocairo.h>
-#include <qrencode.h>
-#include <ctype.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdint.h>
+#include <qrencode.h>
+#include <png.h>
+#include <iconv.h>
+#include <stdbool.h>
+#include <errno.h>
+#include <ctype.h>
 
-// คำนวณ CRC16-CCITT (poly=0x1021, init=0xFFFF)
-uint16_t crc16_ccitt(const char *data, size_t length) {
-    uint16_t crc = 0xFFFF;
-    for (size_t i = 0; i < length; i++) {
-        crc ^= (uint8_t)data[i] << 8;
-        for (int j = 0; j < 8; j++) {
-            if (crc & 0x8000)
-                crc = (crc << 1) ^ 0x1021;
-            else
-                crc <<= 1;
+
+#define PRINTER_DEVICE "/dev/usb/lp1"
+
+char *utf8_to_tis620(const char *utf8) {
+    iconv_t cd = iconv_open("TIS-620", "UTF-8");
+    if (cd == (iconv_t)-1) return NULL;
+
+    size_t inbytes = strlen(utf8);
+    size_t outbytes = inbytes * 2;
+    char *outbuf = malloc(outbytes + 1);
+    if (!outbuf) {
+        iconv_close(cd);
+        return NULL;
+    }
+
+    char *inptr = (char *)utf8;
+    char *outptr = outbuf;
+    size_t inleft = inbytes;
+    size_t outleft = outbytes;
+
+    memset(outbuf, 0, outbytes + 1);
+
+    if (iconv(cd, &inptr, &inleft, &outptr, &outleft) == (size_t)-1) {
+        free(outbuf);
+        iconv_close(cd);
+        return NULL;
+    }
+
+    *outptr = '\0';
+    iconv_close(cd);
+    return outbuf;
+}
+
+
+//// ------------------- โหลด PNG เป็น Bitmap ESC/POS (ลดขนาดได้) -------------------
+//unsigned char* load_png_as_bitmap(const char *filename, int *width, int *height, int *bytes, float scale_factor) {
+    //FILE *fp = fopen(filename, "rb");
+    //if (!fp) return NULL;
+
+    //png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    //if (!png_ptr) { fclose(fp); return NULL; }
+
+    //png_infop info_ptr = png_create_info_struct(png_ptr);
+    //if (!info_ptr) { png_destroy_read_struct(&png_ptr, NULL, NULL); fclose(fp); return NULL; }
+
+    //if (setjmp(png_jmpbuf(png_ptr))) {
+        //png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        //fclose(fp);
+        //return NULL;
+    //}
+
+    //png_init_io(png_ptr, fp);
+    //png_read_info(png_ptr, info_ptr);
+
+    //int orig_width = png_get_image_width(png_ptr, info_ptr);
+    //int orig_height = png_get_image_height(png_ptr, info_ptr);
+
+    //png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+    //png_byte bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
+
+    //if (bit_depth == 16) png_set_strip_16(png_ptr);
+    //if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_palette_to_rgb(png_ptr);
+    //if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) png_set_expand_gray_1_2_4_to_8(png_ptr);
+    //if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png_ptr);
+    //if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY) png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+    //if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) png_set_gray_to_rgb(png_ptr);
+
+    //png_read_update_info(png_ptr, info_ptr);
+
+    //png_bytep *row_pointers = malloc(sizeof(png_bytep) * orig_height);
+    //for (int y = 0; y < orig_height; y++)
+        //row_pointers[y] = malloc(png_get_rowbytes(png_ptr, info_ptr));
+
+    //png_read_image(png_ptr, row_pointers);
+    //fclose(fp);
+
+    //// ลดขนาดภาพตาม scale_factor
+    //*width = orig_width * scale_factor;
+    //*height = orig_height * scale_factor;
+
+    //int bytes_per_line = ((*width + 7) / 8);
+    //*bytes = bytes_per_line * (*height);
+    //unsigned char *bitmap = calloc(*bytes, 1);
+
+    //for (int y = 0; y < *height; y++) {
+        //for (int x = 0; x < *width; x++) {
+            //int src_x = x / scale_factor;
+            //int src_y = y / scale_factor;
+            //png_bytep px = &(row_pointers[src_y][src_x * 4]);
+            //int gray = (px[0] + px[1] + px[2]) / 3;
+            //if (gray < 128) {
+                //int byte_index = (y * bytes_per_line) + (x / 8);
+                //bitmap[byte_index] |= (0x80 >> (x % 8));
+            //}
+        //}
+    //}
+
+    //for (int y = 0; y < orig_height; y++) free(row_pointers[y]);
+    //free(row_pointers);
+    //png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+
+    //return bitmap;
+//}
+
+// ------------------- โหลด PNG เป็น Bitmap ESC/POS พร้อมย่อภาพ -------------------
+unsigned char* load_png_as_bitmap(const char *filename, int *width, int *height, int *bytes, float scale) {
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) return NULL;
+
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png_ptr) { fclose(fp); return NULL; }
+
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) { png_destroy_read_struct(&png_ptr, NULL, NULL); fclose(fp); return NULL; }
+
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+        fclose(fp);
+        return NULL;
+    }
+
+    png_init_io(png_ptr, fp);
+    png_read_info(png_ptr, info_ptr);
+
+    int orig_width = png_get_image_width(png_ptr, info_ptr);
+    int orig_height = png_get_image_height(png_ptr, info_ptr);
+
+    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+    png_byte bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
+
+    if (bit_depth == 16)
+        png_set_strip_16(png_ptr);
+
+    if (color_type == PNG_COLOR_TYPE_PALETTE)
+        png_set_palette_to_rgb(png_ptr);
+
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+        png_set_expand_gray_1_2_4_to_8(png_ptr);
+
+    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+        png_set_tRNS_to_alpha(png_ptr);
+
+    if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY)
+        png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+
+    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        png_set_gray_to_rgb(png_ptr);
+
+    png_read_update_info(png_ptr, info_ptr);
+
+    png_bytep *row_pointers = malloc(sizeof(png_bytep) * orig_height);
+    for (int y = 0; y < orig_height; y++)
+        row_pointers[y] = malloc(png_get_rowbytes(png_ptr, info_ptr));
+
+    png_read_image(png_ptr, row_pointers);
+
+    // ขนาดใหม่หลังย่อภาพ
+    *width  = (int)(orig_width * scale);
+    *height = (int)(orig_height * scale);
+
+    int bytes_per_line = (*width + 7) / 8;
+    *bytes = bytes_per_line * (*height);
+    unsigned char *bitmap = calloc(*bytes, 1);
+
+    // ย่อภาพแบบ nearest neighbor พร้อม weighted grayscale
+    for (int y = 0; y < *height; y++) {
+        for (int x = 0; x < *width; x++) {
+            int orig_x = (int)(x / scale);
+            int orig_y = (int)(y / scale);
+            if (orig_x >= orig_width) orig_x = orig_width - 1;
+            if (orig_y >= orig_height) orig_y = orig_height - 1;
+
+            png_bytep px = &(row_pointers[orig_y][orig_x * 4]);
+            int gray = (px[0] * 0.299 + px[1] * 0.587 + px[2] * 0.114);
+
+            if (gray < 128) {
+                int byte_index = y * bytes_per_line + x / 8;
+                bitmap[byte_index] |= (0x80 >> (x % 8));
+            }
         }
     }
-    return crc & 0xFFFF;
+
+    for (int y = 0; y < orig_height; y++)
+        free(row_pointers[y]);
+    free(row_pointers);
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    fclose(fp);
+
+    return bitmap;
 }
 
-char* build_promptpay_qr(const char *phone, const char *amount) {
-    char merchantInfo[128];
-    char payload[512];
+unsigned char* load_bitmap_corrected(const char *filename, int *width, int *height, int *bytes) {
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) return NULL;
 
-    // ฟอร์แมต Proxy = เบอร์โทร แบบ 0066XXXXXXXXX
-    // ตัดเลข 0 ตัวหน้าออกแล้วเติม 0066 แทน
-    char phoneProxy[32];
-    if (phone[0] == '0') {
-        sprintf(phoneProxy, "0066%s", phone + 1);
-    } else {
-        sprintf(phoneProxy, "0066%s", phone);
+    // อ่าน header ของ BMP (54 ไบต์)
+    unsigned char header[54];
+    if (fread(header, 1, 54, fp) != 54) {
+        fclose(fp);
+        return NULL;
     }
 
-    // Merchant Account Information (ID 29)
-    sprintf(merchantInfo,
-        "0016A000000677010111"   // AID ของ PromptPay
-        "0113%s", phoneProxy     // Proxy (เบอร์)
-    );
+    // ตรวจสอบว่าเป็นไฟล์ BMP
+    if (header[0] != 'B' || header[1] != 'M') {
+        fclose(fp);
+        return NULL;
+    }
 
-    // สร้าง payload (ยังไม่รวม CRC)
-    sprintf(payload,
-        "000201"             // Payload Format Indicator
-        "010212"             // Point of Initiation Method (12 = dynamic)
-        "29%02zu%s"          // Merchant Account Info
-        "5802TH"             // Country Code
-        "5303764"            // Currency (THB)
-        "54%02zu%s"          // Transaction Amount
-        "6304",              // CRC placeholder
-        strlen(merchantInfo), merchantInfo,
-        strlen(amount), amount
-    );
+    // อ่านความกว้างและความสูงของภาพ
+    int w = *(int*)&header[18];
+    int h = *(int*)&header[22];
 
-    // คำนวณ CRC จาก payload ที่มี "6304" ต่อท้าย
-    uint16_t crc = crc16_ccitt(payload, strlen(payload));
-    
-    // จอง memory สำหรับ return
-    char *output = (char*)malloc(strlen(payload) + 5); // +4 for CRC + 1 for null
-    if (!output) return NULL;
+    // จำนวนไบต์ต่อแถว (1 bit per pixel)
+    int bytes_per_line = (w + 7) / 8;
+    int data_size = bytes_per_line * h;
 
-    // รวม CRC (uppercase hex, 4 หลัก)
-    sprintf(output, "%s%04X", payload, crc);
-    
-    return output;
+    unsigned char *bitmap_raw = malloc(data_size);
+    if (!bitmap_raw) {
+        fclose(fp);
+        return NULL;
+    }
+
+    // ข้าม offset ไปยัง data bitmap
+    int data_offset = *(int*)&header[10];
+    fseek(fp, data_offset, SEEK_SET);
+
+    // อ่าน bitmap raw
+    fread(bitmap_raw, 1, data_size, fp);
+    fclose(fp);
+
+    // สร้าง bitmap ใหม่สำหรับเก็บภาพกลับหัวและ mirror
+    unsigned char *bitmap_corrected = calloc(data_size, 1);
+    if (!bitmap_corrected) {
+        free(bitmap_raw);
+        return NULL;
+    }
+
+    // ทำการกลับหัวและ mirror pixel
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            int src_byte_index = y * bytes_per_line + (x / 8);
+            int src_bit = 7 - (x % 8);
+
+            int dst_x = w - 1 - x;  // mirror
+            int dst_y = h - 1 - y;  // flip vertically
+            int dst_byte_index = dst_y * bytes_per_line + (dst_x / 8);
+            int dst_bit = 7 - (dst_x % 8);
+
+            if (bitmap_raw[src_byte_index] & (1 << src_bit)) {
+                bitmap_corrected[dst_byte_index] |= (1 << dst_bit);
+            }
+        }
+    }
+
+    free(bitmap_raw);
+
+    *width = w;
+    *height = h;
+    *bytes = data_size;
+
+    return bitmap_corrected;
 }
 
-// ---------------- Draw Text -----------------
-void draw_text(PangoLayout *layout, cairo_t *cr, int x, int *y, const char *text, int font_size, int bold) {
-    pango_layout_set_text(layout, text, -1);
-    char font_desc[64];
-    snprintf(font_desc, sizeof(font_desc), "%s %d", bold ? "Noto Sans Thai Bold" : "Noto Sans Thai", font_size);
-    PangoFontDescription *desc = pango_font_description_from_string(font_desc);
-    pango_layout_set_font_description(layout, desc);
-    pango_font_description_free(desc);
-    
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_move_to(cr, x, *y);
-    pango_cairo_show_layout(cr, layout);
 
-    int height;
-    pango_layout_get_pixel_size(layout, NULL, &height);
-    *y += height + 5;
+
+// ------------------- พิมพ์ Bitmap ESC/POS -------------------
+void escpos_print_bitmap(int fd, unsigned char *bitmap, int width, int height) {
+    int bytes_per_line = (width + 7) / 8;
+    unsigned char header[] = {
+        0x1D, 0x76, 0x30, 0x00,
+        bytes_per_line & 0xFF, (bytes_per_line >> 8) & 0xFF,
+        height & 0xFF, (height >> 8) & 0xFF
+    };
+    write(fd, header, sizeof(header));
+    write(fd, bitmap, bytes_per_line * height);
 }
 
-// วาดข้อความแบบจัดกึ่งกลาง
-void draw_center_text(PangoLayout *layout, cairo_t *cr, int surface_width, int *y,
-                      const char *text, int font_size, int bold) {
-    pango_layout_set_text(layout, text, -1);
-    char font_desc[64];
-    snprintf(font_desc, sizeof(font_desc), "%s %d",
-             bold ? "Noto Sans Thai Bold" : "Noto Sans Thai", font_size);
-    PangoFontDescription *desc = pango_font_description_from_string(font_desc);
-    pango_layout_set_font_description(layout, desc);
-    pango_font_description_free(desc);
+void escpos_print_bitmap_center(int fd, unsigned char *bitmap, int width, int height, int paper_width) {
+    int bytes_per_line = (width + 7) / 8;
+    int paper_bytes_per_line = (paper_width + 7) / 8;
+    int offset_bytes = (paper_bytes_per_line - bytes_per_line) / 2;
 
-    int width, height;
-    pango_layout_get_pixel_size(layout, &width, &height);
-    int x = (surface_width - width) / 2;
+    unsigned char header[] = {
+        0x1D, 0x76, 0x30, 0x00,           // GS v 0 m
+        bytes_per_line & 0xFF,            // xL
+        (bytes_per_line >> 8) & 0xFF,     // xH
+        height & 0xFF,                     // yL
+        (height >> 8) & 0xFF               // yH
+    };
 
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_move_to(cr, x, *y);
-    pango_cairo_show_layout(cr, layout);
+    // พิมพ์ offset (padding) ถ้าจำเป็น
+    if (offset_bytes > 0) {
+        unsigned char *padding = calloc(offset_bytes * height, 1);
+        unsigned char *new_bitmap = calloc(offset_bytes * height + bytes_per_line * height, 1);
 
-    *y += height + 5;
+        for (int y = 0; y < height; y++) {
+            memcpy(new_bitmap + y * (offset_bytes + bytes_per_line), padding + y * offset_bytes, offset_bytes);
+            memcpy(new_bitmap + y * (offset_bytes + bytes_per_line) + offset_bytes,
+                   bitmap + y * bytes_per_line,
+                   bytes_per_line);
+        }
+        free(padding);
+
+        // อัปเดต header ให้ใช้ขนาดใหม่
+        header[4] = (bytes_per_line + offset_bytes) & 0xFF;
+        header[5] = ((bytes_per_line + offset_bytes) >> 8) & 0xFF;
+
+        write(fd, header, sizeof(header));
+        write(fd, new_bitmap, (bytes_per_line + offset_bytes) * height);
+        free(new_bitmap);
+    } else {
+        write(fd, header, sizeof(header));
+        write(fd, bitmap, bytes_per_line * height);
+    }
 }
 
-// ---------------- Print Slip -----------------
-void print_slip_full(Order *order) {
+void escpos_print_qrcode_scaled(int fd, QRcode *qrcode, int scale, int paper_width) {
+    int qr_width = qrcode->width;
+    int bytes_per_line = ((qr_width * scale) + 7) / 8;
+    int paper_bytes_per_line = (paper_width + 7) / 8;
+    int offset_bytes = (paper_bytes_per_line - bytes_per_line) / 2;
+
+    unsigned char *bitmap = calloc(bytes_per_line * qr_width * scale, 1);
+    if (!bitmap) return;
+
+    for (int y = 0; y < qr_width; y++) {
+        for (int x = 0; x < qr_width; x++) {
+            if (qrcode->data[y * qr_width + x] & 0x01) {
+                for (int dy = 0; dy < scale; dy++) {
+                    for (int dx = 0; dx < scale; dx++) {
+                        int xx = x * scale + dx;
+                        int yy = y * scale + dy;
+                        bitmap[yy * bytes_per_line + (xx / 8)] |= (0x80 >> (xx % 8));
+                    }
+                }
+            }
+        }
+    }
+
+    int bytes_per_row = bytes_per_line;
+    for (int y = 0; y < qr_width * scale; y++) {
+        unsigned char header[] = {
+            0x1B, 0x2A, 0x21, // Select bit-image mode
+            bytes_per_row & 0xFF, (bytes_per_row >> 8) & 0xFF
+        };
+        write(fd, header, sizeof(header));
+
+        // เติม offset เพื่อกึ่งกลาง
+        for (int i = 0; i < offset_bytes; i++) {
+            unsigned char zero = 0x00;
+            write(fd, &zero, 1);
+        }
+
+        // พิมพ์ bitmap บรรทัดนั้น
+        write(fd, bitmap + y * bytes_per_line, bytes_per_line);
+
+        unsigned char nl = 0x0A; // newline
+        write(fd, &nl, 1);
+    }
+
+    free(bitmap);
+}
+
+unsigned char* load_bitmap_fix(const char *filename, int *width, int *height, int *bytes) {
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) return NULL;
+
+    unsigned char header[54];
+    if (fread(header, 1, 54, fp) != 54) {
+        fclose(fp);
+        return NULL;
+    }
+
+    if (header[0] != 'B' || header[1] != 'M') {
+        fclose(fp);
+        return NULL;
+    }
+
+    int w = *(int*)&header[18];
+    int h = *(int*)&header[22];
+    int data_offset = *(int*)&header[10];
+    int bytes_per_line = (w + 7) / 8;
+    int data_size = bytes_per_line * h;
+
+    unsigned char *bitmap_raw = malloc(data_size);
+    if (!bitmap_raw) {
+        fclose(fp);
+        return NULL;
+    }
+
+    fseek(fp, data_offset, SEEK_SET);
+    fread(bitmap_raw, 1, data_size, fp);
+    fclose(fp);
+
+    unsigned char *bitmap_fixed = calloc(data_size, 1);
+    if (!bitmap_fixed) {
+        free(bitmap_raw);
+        return NULL;
+    }
+
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            int src_byte = y * bytes_per_line + (x / 8);
+            int src_bit = x % 8;
+
+            int dst_x = x;  // ไม่ mirror ซ้าย–ขวา
+            int dst_y = h - 1 - y; // flip vertical
+            int dst_byte = dst_y * bytes_per_line + (dst_x / 8);
+            int dst_bit = dst_x % 8;
+
+            // กลับสี: bit 0 → bit 1
+            if (!(bitmap_raw[src_byte] & (1 << (7 - src_bit)))) {
+                bitmap_fixed[dst_byte] |= (1 << (7 - dst_bit));
+            }
+        }
+    }
+
+    free(bitmap_raw);
+
+    *width = w;
+    *height = h;
+    *bytes = data_size;
+        printf("[DEBUG] Returned width: %d, height: %d, bytes: %d\n", *width, *height, *bytes);
+
+    return bitmap_fixed;
+}
+
+bool is_valid_char(const unsigned char *p) {
+    // ภาษาอังกฤษ a–z, A–Z
+    if (isalpha(*p)) return true;
+
+    // ตัวเลข 0–9
+    if (isdigit(*p)) return true;
+
+    // อักขระพิเศษทั่วไป (ASCII)
+    const char *special = " .,'\"!?@#%&*^-_+=():;";
+    if (strchr(special, *p)) return true;
+
+    // ภาษาไทย UTF‑8: U+0E00..U+0E7F (3 ไบต์)
+    if ((*p & 0xF0) == 0xE0 && (p[1] == 0xB8 || p[1] == 0xB9)) {
+        return true;
+    }
+
+    return false;
+}
+
+bool remove_invalid_utf8(const char *input, char *output, size_t out_size) {
+    size_t out_pos = 0;
+    output[0] = '\0';
+
+    const unsigned char *p = (const unsigned char *)input;
+
+    while (*p && out_pos < out_size - 1) {
+        if (is_valid_char(p)) {
+            if ((*p & 0xF0) == 0xE0) { // ภาษาไทย (3 ไบต์)
+                if (out_pos + 2 < out_size - 1) {
+                    output[out_pos++] = *p++;
+                    output[out_pos++] = *p++;
+                    output[out_pos++] = *p++;
+                } else {
+                    break;
+                }
+            } else { // ASCII
+                output[out_pos++] = *p++;
+            }
+        } else {
+            // ข้าม emoji หรืออักขระพิเศษอื่น
+            if ((*p & 0xF0) == 0xF0) p += 4;
+            else if ((*p & 0xE0) == 0xE0) p += 3;
+            else if ((*p & 0xC0) == 0xC0) p += 2;
+            else p++;
+        }
+    }
+
+    output[out_pos] = '\0';
+    return true;
+}
+
+
+void print_slip_full(AppWidgets *app, Order *order) {
     if (!order) return;
 
-    int surface_width = 400;
-    int y = 10;
-    char buf[256];
-
-    // วัดขนาด
-    cairo_surface_t *rec_surface = cairo_recording_surface_create(CAIRO_CONTENT_COLOR_ALPHA, NULL);
-    cairo_t *rec_cr = cairo_create(rec_surface);
-    PangoLayout *layout = pango_cairo_create_layout(rec_cr);
-
-    snprintf(buf, sizeof(buf), "ออเดอร์ #%d", order->order_id);
-    draw_text(layout, rec_cr, 10, &y, buf, 18, 1);
-    snprintf(buf, sizeof(buf), "ลูกค้า: %s", order->line_name);
-    draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
-    snprintf(buf, sizeof(buf), "สถานที่ส่ง: %s", order->place);
-    draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
-    snprintf(buf, sizeof(buf), "เวลาส่ง: %s", order->delivery_time);
-    draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
-    snprintf(buf, sizeof(buf), "สถานะ: %s", order->statusText);
-    draw_text(layout, rec_cr, 10, &y, buf, 16, 1);
-    snprintf(buf, sizeof(buf), "วันที่สั่ง: %s", order->created_at);
-    draw_text(layout, rec_cr, 10, &y, buf, 16, 0);
-
-    draw_text(layout, rec_cr, 10, &y, "รายการ:", 16, 1);
-    double totalAmount = 0;
-    
-    for (int i = 0; i < order->item_count; i++) {
-      // แสดงชื่อสินค้า
-      snprintf(buf, sizeof(buf), "- %s %d x %.2f", 
-               order->items[i].name, 
-               order->items[i].qty, 
-               order->items[i].price);
-      draw_text(layout, rec_cr, 20, &y, buf, 16, 0);
-
-      totalAmount += order->items[i].price * order->items[i].qty;
-      // ถ้ามี option_text ให้แสดงด้านล่าง
-      if (strlen(order->items[i].option_text) > 0) {
-          snprintf(buf, sizeof(buf), "(%s)", order->items[i].option_text);
-          draw_text(layout, rec_cr, 40, &y, buf, 12, 0);  
-          // ↑ ใช้ x=40 เพื่อเว้นจากข้างหน้าเล็กน้อย
-      }
+    int fd = open(PRINTER_DEVICE, O_WRONLY);
+    if (fd < 0) {
+        perror("เปิดเครื่องพิมพ์ไม่ได้");
+        return;
     }
-    
-    snprintf(buf, sizeof(buf), "รวมทั้งหมด: %.2f บาท", totalAmount);
-    draw_text(layout, rec_cr, 10, &y, buf, 16, 1);
 
-    int qr_size = 120;
-    y += qr_size + 20;
-    int total_height = y;
+    // เริ่มต้นเครื่องพิมพ์
+    unsigned char init[] = {0x1B, 0x40};
+    write(fd, init, sizeof(init));
 
-    cairo_destroy(rec_cr);
-    cairo_surface_destroy(rec_surface);
-    g_object_unref(layout);
+    // ตั้ง Codepage เป็น PC874 (Codepage 30)
+    unsigned char set_codepage[] = {0x1B, 0x74, 0x1E};
+    write(fd, set_codepage, sizeof(set_codepage));
 
-    // Render จริง
-    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, surface_width, total_height + 150);
-    cairo_t *cr = cairo_create(surface);
-    layout = pango_cairo_create_layout(cr);
+    char buf[512];
+    char *txt;
 
-    cairo_set_source_rgb(cr, 1,1,1);
-    cairo_paint(cr);
+    snprintf(buf, sizeof(buf), "ออเดอร์ #%d\n", order->order_id);
+    txt = utf8_to_tis620(buf);
+    if (txt) { write(fd, txt, strlen(txt)); free(txt); }
 
-    y = 10;
-    snprintf(buf, sizeof(buf), "ออเดอร์ #%d", order->order_id);
-    draw_text(layout, cr, 10, &y, buf, 18, 1);
-    snprintf(buf, sizeof(buf), "ลูกค้า: %s", order->line_name);
-    draw_text(layout, cr, 10, &y, buf, 16, 0);
-    snprintf(buf, sizeof(buf), "สถานที่ส่ง: %s", order->place);
-    draw_text(layout, cr, 10, &y, buf, 16, 0);
-    snprintf(buf, sizeof(buf), "เวลาส่ง: %s", order->delivery_time);
-    draw_text(layout, cr, 10, &y, buf, 16, 0);
-    snprintf(buf, sizeof(buf), "วันที่สั่ง: %s", order->created_at);
-    draw_text(layout, cr, 10, &y, buf, 16, 0);
+    //snprintf(buf, sizeof(buf), "ลูกค้า: %s\n", order->line_name);
+    //txt = utf8_to_tis620(buf);
+    //if (txt) { write(fd, txt, strlen(txt)); free(txt); }
 
-    draw_text(layout, cr, 10, &y, "รายการ:", 16, 1);
-    totalAmount = 0;
+    //snprintf(buf, sizeof(buf), "สถานที่ส่ง: %s\n", order->place);
+    //txt = utf8_to_tis620(buf);
+    //if (txt) { write(fd, txt, strlen(txt)); free(txt); }
+    // เปิดตัวหนา
+// ข้อความปกติ
+snprintf(buf, sizeof(buf), "ลูกค้า: ");
+txt = utf8_to_tis620(buf);
+if (txt) { 
+    write(fd, txt, strlen(txt)); 
+    free(txt); 
+}
 
+// เปิดตัวหนา
+unsigned char set_bold[] = {0x1B, 0x45, 0x01};
+write(fd, set_bold, sizeof(set_bold));
+
+// ชื่อ
+snprintf(buf, sizeof(buf), "%s\n", order->line_name);
+txt = utf8_to_tis620(buf);
+if (txt) { 
+    write(fd, txt, strlen(txt)); 
+    free(txt); 
+}
+
+// ปิดตัวหนา
+unsigned char reset_bold[] = {0x1B, 0x45, 0x00};
+write(fd, reset_bold, sizeof(reset_bold));
+
+
+// ข้อความปกติ
+snprintf(buf, sizeof(buf), "สถานที่ส่ง: ");
+txt = utf8_to_tis620(buf);
+if (txt) { 
+    write(fd, txt, strlen(txt)); 
+    free(txt); 
+}
+
+// เปิดตัวหนา
+write(fd, set_bold, sizeof(set_bold));
+
+//// สถานที่ส่ง
+//snprintf(buf, sizeof(buf), "%s\n", order->place);
+//txt = utf8_to_tis620(buf);
+//if (txt) { 
+    //write(fd, txt, strlen(txt)); 
+    //free(txt); 
+//}
+
+char clean_buf[512];
+remove_invalid_utf8(order->place, clean_buf, sizeof(clean_buf));
+
+//snprintf(buf, sizeof(buf), "%s\n", clean_buf);
+snprintf(buf, sizeof(buf), "%.*s\n", (int)(sizeof(buf)-2), clean_buf);
+
+txt = utf8_to_tis620(buf);
+if (txt) { 
+    write(fd, txt, strlen(txt)); 
+    free(txt); 
+}
+
+// ปิดตัวหนา
+write(fd, reset_bold, sizeof(reset_bold));
+
+    snprintf(buf, sizeof(buf), "เวลาส่ง: %s\n", order->delivery_time);
+    txt = utf8_to_tis620(buf);
+    if (txt) { write(fd, txt, strlen(txt)); free(txt); }
+
+    snprintf(buf, sizeof(buf), "วันที่สั่ง: %s\n", order->created_at);
+    txt = utf8_to_tis620(buf);
+    if (txt) { write(fd, txt, strlen(txt)); free(txt); }
+
+    txt = utf8_to_tis620("รายการ:\n");
+    if (txt) { write(fd, txt, strlen(txt)); free(txt); }
+
+    double totalAmount = 0;
     for (int i = 0; i < order->item_count; i++) {
-        snprintf(buf, sizeof(buf), "- %s %d x %.2f", order->items[i].name, order->items[i].qty, order->items[i].price);
-        draw_text(layout, cr, 20, &y, buf, 16, 0);
+        snprintf(buf, sizeof(buf), "- %s %d x %.2f\n", order->items[i].name, order->items[i].qty, order->items[i].price);
+        txt = utf8_to_tis620(buf);
+        if (txt) { write(fd, txt, strlen(txt)); free(txt); }
+
         totalAmount += order->items[i].price * order->items[i].qty;
-            // แสดง option_text ถ้ามี
         if (strlen(order->items[i].option_text) > 0) {
-            snprintf(buf, sizeof(buf), "(%s)", order->items[i].option_text);
-            draw_text(layout, cr, 40, &y, buf, 12, 0);
-            //g_print("Option (cr): %s\n", order->items[i].option_text);
+            snprintf(buf, sizeof(buf), "  (%s)\n", order->items[i].option_text);
+            txt = utf8_to_tis620(buf);
+            if (txt) { write(fd, txt, strlen(txt)); free(txt); }
         }
     }
-    snprintf(buf, sizeof(buf), "รวมทั้งหมด: %.2f บาท", totalAmount);
-    draw_text(layout, cr, 10, &y, buf, 16, 1);
 
-    // -------- QR PromptPay (กลางล่าง) --------
-    char amount_str[16]="";
-    if(totalAmount>0) snprintf(amount_str,sizeof(amount_str),"%.2f",totalAmount);
+    snprintf(buf, sizeof(buf), "รวมทั้งหมด: %.2f บาท\n", totalAmount);
+    txt = utf8_to_tis620(buf);
+    if (txt) { write(fd, txt, strlen(txt)); free(txt); }
     
+    // เพิ่มบรรทัดเว้นวรรคหลังโลโก้
+    unsigned char nl = 0x0A; // new line
+    for (int i = 0; i < 2; i++) { // เว้น 3 บรรทัด
+        write(fd, &nl, 1);
+    }
+
+int logo_width, logo_height, logo_bytes;
+//unsigned char *logo_bitmap = load_bitmap("PromptPay-logo.bmp", &logo_width, &logo_height, &logo_bytes);
+//unsigned char *logo_bitmap = load_bitmap_corrected("PromptPay-logo.bmp", &logo_width, &logo_height, &logo_bytes);
+unsigned char *logo_bitmap = load_bitmap_fix("PromptPay-logo.bmp", &logo_width, &logo_height, &logo_bytes);
+//unsigned char *logo_bitmap = load_bitmap_fix("PromptPay-logo.bmp", &logo_width, &logo_height, &logo_bytes, 250);
+
+if (logo_bitmap) {
+    escpos_print_bitmap(fd, logo_bitmap, logo_width, logo_height);
+    free(logo_bitmap);
+    // เพิ่มบรรทัดเว้นวรรคหลังโลโก้
+    unsigned char nl = 0x0A; // new line
+    for (int i = 0; i < 2; i++) { // เว้น 3 บรรทัด
+        write(fd, &nl, 1);
+    }
+}
+
+
+
+    // -------- สร้าง QR PromptPay --------
+    char amount_str[16] = "";
+    if (totalAmount > 0) snprintf(amount_str, sizeof(amount_str), "%.2f", totalAmount);
+
     char *qrdata = build_promptpay_qr("0944574687", amount_str);
     if (!qrdata) {
-      fprintf(stderr, "Failed to build QR data\n");
-      return;
+        fprintf(stderr, "Failed to build QR data\n");
+        close(fd);
+        return;
     }
-    
-    y += 20;  // เลื่อนลง 1 บรรทัด
 
-    QRcode *qrcode = QRcode_encodeString(qrdata, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
+    QRcode *qrcode = QRcode_encodeString(qrdata, 0, QR_ECLEVEL_Q, QR_MODE_8, 3);
     free(qrdata);
-    
-int scale = 4;
-int qr_margin = 4;
-
-cairo_surface_t *logo = cairo_image_surface_create_from_png("PromptPay-logo.png");
-if (logo) {
-    int qr_draw_size = (qrcode->width + 2*qr_margin) * scale;
-    int logo_width = qr_draw_size;
-
-    // คำนวณความสูงตามอัตราส่วนจริง
-    int logo_height = (int)((double)logo_width / cairo_image_surface_get_width(logo) 
-                                         * cairo_image_surface_get_height(logo));
-
-    // จำกัดขนาดโลโก้ไม่ให้เกิน 60% ของ QR
-    int max_logo_width = (int)(qr_draw_size * 0.9);
-    if (logo_width > max_logo_width) {
-        logo_width = max_logo_width;
-        logo_height = (int)((double)logo_width / cairo_image_surface_get_width(logo) 
-                                         * cairo_image_surface_get_height(logo));
-    }
-
-    int logo_x = (surface_width - logo_width) / 2;
-    int logo_y = y;
-
-    cairo_save(cr);
-    cairo_translate(cr, logo_x, logo_y);
-    cairo_scale(cr, (double)logo_width / cairo_image_surface_get_width(logo),
-                     (double)logo_height / cairo_image_surface_get_height(logo));
-    cairo_set_source_surface(cr, logo, 0, 0);
-    cairo_paint(cr);
-    cairo_restore(cr);
-
-    cairo_surface_destroy(logo);
-
-    // เว้นระยะเล็กน้อยให้ QR ไม่ชนโลโก้
-//    int spacing = 8;  
-    y = logo_y + logo_height;
-}
-
 
     if (qrcode) {
-        int scale = 4;
-        int qr_margin = 4;
-        int qr_draw_size = (qrcode->width + 2*qr_margin) * scale;
-        int qr_x = (surface_width - qr_draw_size)/2;
-        int qr_y = y;
+        int qr_width = qrcode->width;
+        int scale = 5; // ขยาย QR Code ขนาดขึ้น 3 เท่า
+        int scaled_width = qr_width * scale;
+        int bytes_per_line = (scaled_width + 7) / 8;
+        int qr_bytes = bytes_per_line * scaled_width;
+        unsigned char *qr_bitmap = calloc(qr_bytes, 1);
 
-        cairo_set_source_rgb(cr, 1,1,1);
-        cairo_rectangle(cr, qr_x, qr_y, qr_draw_size, qr_draw_size);
-        cairo_fill(cr);
+        for (int y = 0; y < qr_width; y++) {
+            for (int x = 0; x < qr_width; x++) {
+                if (qrcode->data[y * qr_width + x] & 1) {
+                    for (int dy = 0; dy < scale; dy++) {
+                        for (int dx = 0; dx < scale; dx++) {
+                            int sx = x * scale + dx;
+                            int sy = y * scale + dy;
+                            int byte_index = sy * bytes_per_line + sx / 8;
+                            qr_bitmap[byte_index] |= (0x80 >> (sx % 8));
+                        }
+                    }
+                }
+            }
+        }
+     
+        // พิมพ์ QR Code แบบกึ่งกลาง
+        escpos_print_bitmap_center(fd, qr_bitmap, scaled_width, scaled_width, 384);
 
-        cairo_save(cr);
-        cairo_translate(cr, qr_x + qr_margin*scale, qr_y + qr_margin*scale);
-        cairo_set_source_rgb(cr, 0,0,0);
-        for (int yy = 0; yy < qrcode->width; yy++)
-            for (int xx = 0; xx < qrcode->width; xx++)
-                if (qrcode->data[yy * qrcode->width + xx] & 1)
-                    cairo_rectangle(cr, xx*scale, yy*scale, scale, scale);
-        cairo_fill(cr);
-        cairo_restore(cr);
-
+        free(qr_bitmap);
         QRcode_free(qrcode);
-        
-        y = qr_y + qr_draw_size; // เลื่อน y ลงสำหรับเบอร์โทรและจำนวนเงิน
+        // เพิ่มบรรทัดเว้นวรรคหลังโลโก้
+        unsigned char nl = 0x0A; // new line
+        for (int i = 0; i < 2; i++) { // เว้น 3 บรรทัด
+            write(fd, &nl, 1);
+        }
     }
     
-    char buf2[128];
-    snprintf(buf2, sizeof(buf2), "%s", "0944574687");
-    draw_center_text(layout, cr, surface_width, &y, buf2, 14, 0);
-
-    y += 10;
-
-    snprintf(buf2, sizeof(buf2), "%s", "บัญชี: โยธิน อินบรรเลง");
-    draw_center_text(layout, cr, surface_width, &y, buf2, 14, 0);
-
-    // -------- QR Order ID (มุมบนขวา) --------
-    char order_qr[32];
-    snprintf(order_qr, sizeof(order_qr), "%d", order->order_id);
-    QRcode *order_qrcode = QRcode_encodeString(order_qr, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
-
-    if (order_qrcode) {
-        int scale = 2;
-        int margin = 2;
-        int qr_draw_size = (order_qrcode->width + 2*margin) * scale;
-        int qr_x = surface_width - qr_draw_size - 10;
-        int qr_y = 10;
-
-        cairo_set_source_rgb(cr, 1,1,1);
-        cairo_rectangle(cr, qr_x, qr_y, qr_draw_size, qr_draw_size);
-        cairo_fill(cr);
-
-        cairo_save(cr);
-        cairo_translate(cr, qr_x + margin*scale, qr_y + margin*scale);
-        cairo_set_source_rgb(cr, 0,0,0);
-        for (int yy = 0; yy < order_qrcode->width; yy++)
-            for (int xx = 0; xx < order_qrcode->width; xx++)
-                if (order_qrcode->data[yy * order_qrcode->width + xx] & 1)
-                    cairo_rectangle(cr, xx*scale, yy*scale, scale, scale);
-        cairo_fill(cr);
-        cairo_restore(cr);
-
-        QRcode_free(order_qrcode);
-    }
 
 
+    // --- จัดกึ่งกลางข้อความหลัง QR Code ---
+    unsigned char align_center[] = {0x1B, 0x61, 0x01}; // 0x01 = จัดกึ่งกลาง
+    write(fd, align_center, sizeof(align_center));
 
-    // -------- เขียน PNG --------
-    cairo_surface_write_to_png(surface, "/tmp/slip.png");
 
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-    g_object_unref(layout);
+    // พิมพ์เลข PromptPay
+    snprintf(buf, sizeof(buf), "0944574687\n");
+    txt = utf8_to_tis620(buf);
+    if (txt) { write(fd, txt, strlen(txt)); free(txt); }
 
-    printf("✅ สลิปสร้างเสร็จแล้ว: /tmp/slip.png\n");
+    // พิมพ์ชื่อบัญชี
+    snprintf(buf, sizeof(buf), "บัญชี: โยธิน อินบรรเลง\n");
+    txt = utf8_to_tis620(buf);
+    if (txt) { write(fd, txt, strlen(txt)); free(txt); }
+
+    // กลับไปจัดชิดซ้าย (ถ้าต้องการ)
+    unsigned char align_left[] = {0x1B, 0x61, 0x00};
+    write(fd, align_left, sizeof(align_left));
+
+    unsigned char feed[] = {0x1B, 0x64, 0x05};  // feed 5 บรรทด
+    write(fd, feed, sizeof(feed));
+
+    close(fd);
 }
+
