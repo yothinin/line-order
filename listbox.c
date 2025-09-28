@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "listbox.h"
 #include "screenfade.h"
 #include "udp_listen.h"
@@ -1236,6 +1237,14 @@ void on_radio_toggled(GtkToggleButton *button, gpointer user_data) {
 
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
+
+    gchar home[256];
+    //g_sprintf(home, "%s/%s", g_get_home_dir(), "projects/line-order");
+    g_snprintf(home, sizeof(home), "%s/%s", g_get_home_dir(), "projects/line-order");
+    g_print("Home: %s\n", home);
+    chdir(home);
+
+
 
     app.filter_date[0] = '\0'; // เริ่มต้นเป็น empty string
     load_dotenv_to_struct(&app, ".env");
