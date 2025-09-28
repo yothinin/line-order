@@ -152,11 +152,11 @@ static gchar* parse_orders_and_generate_summary(const gchar *json_str, gchar **o
     g_tree_foreach(menu_groups, foreach_menu_group, summary);
     g_string_append(summary, "\n");
 
-    //// สรุปการชำระเงิน
-    //g_string_append(summary, "💰 สรุปการชำระเงิน\n");
-    //g_string_append_printf(summary, "ยังไม่ชำระเงิน: %.2f บาท\n", notPaid);
-    //g_string_append_printf(summary, "โอนเงิน: %.2f บาท\n", transfer);
-    //g_string_append_printf(summary, "เงินสด: %.2f บาท\n", cash);
+    // สรุปการชำระเงิน
+    g_string_append(summary, "💰 สรุปการชำระเงิน\n");
+    g_string_append_printf(summary, "ยังไม่ชำระเงิน: %.2f บาท\n", notPaid);
+    g_string_append_printf(summary, "โอนเงิน: %.2f บาท\n", transfer);
+    g_string_append_printf(summary, "เงินสด: %.2f บาท\n", cash);
 
     g_tree_destroy(time_groups);
     g_tree_destroy(menu_groups);
