@@ -15,7 +15,7 @@
 #include <ctype.h>
 
 
-#define PRINTER_DEVICE "/dev/usb/lp1"
+#define PRINTER_DEVICE "/dev/usb/lp0"
 
 char *utf8_to_tis620(const char *utf8) {
     iconv_t cd = iconv_open("TIS-620", "UTF-8");

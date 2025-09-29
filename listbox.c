@@ -453,35 +453,43 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
 gpointer refresh_data_thread(gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
 
-    char date_str[11] = {0};
-    if (strlen(app->filter_date) > 0) {
-        strncpy(date_str, app->filter_date, sizeof(date_str) - 1);
-        date_str[sizeof(date_str) - 1] = '\0';
-    } else {
-        time_t t = time(NULL);
-        struct tm tm_now;
-        localtime_r(&t, &tm_now);
-        strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
-    }
+    while (1) {
+        char date_str[11] = {0};
+        if (strlen(app->filter_date) > 0) {
+            strncpy(date_str, app->filter_date, sizeof(date_str) - 1);
+            date_str[sizeof(date_str) - 1] = '\0';
+        } else {
+            time_t t = time(NULL);
+            struct tm tm_now;
+            localtime_r(&t, &tm_now);
+            strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
+        }
 
-    char url[1024];
-    snprintf(url, sizeof(url),
-             "%s/api/store/orders?date=%s&monitor=%d",
-             app->api_base_url, date_str,
-             (app->selected_monitor > 0 ? app->selected_monitor : 1));
+        char url[1024];
+        snprintf(url, sizeof(url),
+                 "%s/api/store/orders?date=%s&monitor=%d",
+                 app->api_base_url, date_str,
+                 (app->selected_monitor > 0 ? app->selected_monitor : 1));
 
-    gchar *json_data = fetch_orders_json(url);
+        gchar *json_data = fetch_orders_json(url);
 
-    if (json_data) {
-      PopulateIdleData *data = g_new0(PopulateIdleData, 1);
-      data->app = app;              // pointer จริง
-      data->json_data = json_data;  // รับ ownership ของ pointer จาก fetch_orders_json
+        if (json_data) {
+            // จัดเตรียมข้อมูลสำหรับอัปเดต UI (ผ่าน main loop)
+            PopulateIdleData *data = g_new0(PopulateIdleData, 1);
+            data->app = app;              // ใช้ pointer จริง
+            data->json_data = json_data;  // ส่ง ownership ไป populate_listbox_idle
 
-      g_idle_add(populate_listbox_idle, data);
+            // เรียกอัปเดต widget ผ่าน main loop → ปลอดภัยกับ GTK
+            g_idle_add(populate_listbox_idle, data);
+        }
+
+        // พัก 5 วินาที (หรือจะปรับค่าได้ตามต้องการ)
+        g_usleep(5 * G_USEC_PER_SEC);
     }
 
     return NULL;
 }
+
 
 void refocus_first_row(AppWidgets *app) {
     GtkListBox *listbox = GTK_LIST_BOX(app->listbox);
@@ -1238,13 +1246,11 @@ void on_radio_toggled(GtkToggleButton *button, gpointer user_data) {
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
 
-    gchar home[256];
+    //gchar home[256];
     //g_sprintf(home, "%s/%s", g_get_home_dir(), "projects/line-order");
-    g_snprintf(home, sizeof(home), "%s/%s", g_get_home_dir(), "projects/line-order");
-    g_print("Home: %s\n", home);
-    chdir(home);
-
-
+    //g_snprintf(home, sizeof(home), "%s/%s", g_get_home_dir(), "projects/line-order");
+    //g_print("Home: %s\n", home);
+    chdir("/home/yothinin/projects/line-order/");
 
     app.filter_date[0] = '\0'; // เริ่มต้นเป็น empty string
     load_dotenv_to_struct(&app, ".env");
@@ -1391,7 +1397,10 @@ int main(int argc, char *argv[]) {
     //refresh_data(&app);
     g_thread_new("refresh_data_initial", refresh_data_thread, &app);
 
-    g_timeout_add(5000, refresh_data_timeout, &app);
+    //g_timeout_add(5000, refresh_data_timeout, &app);
+    // เริ่ม background refresh thread แค่ครั้งเดียว
+    g_thread_new("refresh_data", refresh_data_thread, &app);
+
 
     gtk_widget_show_all(app.window);
 
