@@ -15,7 +15,7 @@
 #include <ctype.h>
 
 
-#define PRINTER_DEVICE "/dev/usb/lp0"
+//#define PRINTER_DEVICE "/dev/usb/lp0"
 
 char *utf8_to_tis620(const char *utf8) {
     iconv_t cd = iconv_open("TIS-620", "UTF-8");
@@ -496,7 +496,7 @@ bool remove_invalid_utf8(const char *input, char *output, size_t out_size) {
 void print_slip_full(AppWidgets *app, Order *order) {
     if (!order) return;
 
-    int fd = open(PRINTER_DEVICE, O_WRONLY);
+    int fd = open(app->printer_device, O_WRONLY);
     if (fd < 0) {
         perror("เปิดเครื่องพิมพ์ไม่ได้");
         return;
