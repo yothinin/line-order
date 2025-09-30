@@ -141,8 +141,7 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
             app->font_size = fs;   // 🔹 เพิ่มตรงนี้
           }
     }
-    
- 
+
     fclose(f);
 }
 
@@ -492,7 +491,6 @@ gpointer refresh_data_thread(gpointer user_data) {
     return NULL;
 }
 
-
 void refocus_first_row(AppWidgets *app) {
     GtkListBox *listbox = GTK_LIST_BOX(app->listbox);
     GtkListBoxRow *first_row = gtk_list_box_get_row_at_index(listbox, 0);
@@ -539,17 +537,43 @@ void btn_do_clicked_cb(GtkButton *button, gpointer user_data) {
 
 }
 
+//gboolean refocus_first_row_idle(gpointer user_data) {
+    //AppWidgets *app = (AppWidgets *)user_data;  // cast เป็น AppWidgets*
+    //GtkListBox *listbox = GTK_LIST_BOX(app->listbox);
+    //GtkListBoxRow *first_row = gtk_list_box_get_row_at_index(listbox, 0);
+    //if (first_row) {
+        //gtk_list_box_select_row(listbox, first_row);
+        //gtk_widget_grab_focus(GTK_WIDGET(listbox));
+        //app->selected_index = 0;
+    //}
+    //return FALSE; // เรียกครั้งเดียว
+//}
+
 gboolean refocus_first_row_idle(gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;  // cast เป็น AppWidgets*
     GtkListBox *listbox = GTK_LIST_BOX(app->listbox);
     GtkListBoxRow *first_row = gtk_list_box_get_row_at_index(listbox, 0);
+
     if (first_row) {
         gtk_list_box_select_row(listbox, first_row);
         gtk_widget_grab_focus(GTK_WIDGET(listbox));
         app->selected_index = 0;
+
+        // 🔹 ดึง order_id ที่ผูกกับ row นี้ (ถ้ามีเก็บไว้ตอนสร้าง)
+        gpointer order_id_ptr = g_object_get_data(G_OBJECT(first_row), "order-id");
+        if (order_id_ptr) {
+            const char *order_id = (const char *)order_id_ptr;
+            g_print("[DEBUG] First row order_id = %s\n", order_id);
+        } else {
+            g_print("[DEBUG] First row ไม่มี order_id ที่ผูกไว้\n");
+        }
+    } else {
+        g_print("[DEBUG] ไม่มี row แรกใน listbox\n");
     }
+
     return FALSE; // เรียกครั้งเดียว
 }
+
 
 
 // --- btn_done_clicked_cb แบบ async ---
@@ -581,8 +605,6 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
     g_thread_new("refresh_data_done", refresh_data_thread, app);
 
     // 🔹 restore row เดิม
-    //refocus_selected_row(app);
-    refocus_first_row(app);
     //g_idle_add(refocus_first_row_idle, app);
 
 
@@ -595,6 +617,9 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
         print_slip_full_cairo(app, order);
       g_free(order);
     }
+    
+    g_idle_add(refocus_first_row_idle, app);
+    
 }
 
 void on_row_selected(GtkListBox *box, GtkListBoxRow *row, AppWidgets *app) {
