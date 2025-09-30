@@ -83,6 +83,8 @@ typedef struct {
     char print_method[16];    // cups หรือ direct
     char printer_name[128];   // สำหรับ CUPS
     char printer_device[128]; // สำหรับ Direct
+    char slip_type[16];
+
         // เพิ่มส่วนนี้
     char line_id[128];
     char selected_date[11]; // YYYY-MM-DD

@@ -132,6 +132,8 @@ void load_dotenv_to_struct(AppWidgets *app, const char *filename) {
             set_field(app->printer_name, sizeof(app->printer_name), value);
         else if (strcmp(key, "PRINTER_DEVICE") == 0)
             set_field(app->printer_device, sizeof(app->printer_device), value);
+        else if (strcmp(key, "SLIP_TYPE") == 0)
+            set_field(app->slip_type, sizeof(app->slip_type), value);
         else if (strcmp(key, "LISTBOX_FONT_SIZE") == 0) {
             int fs = atoi(value);
             if (fs < 14) fs = 14;
@@ -587,9 +589,11 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
     // 🔹 print slip แบบเดิม (สามารถปรับเป็น async ได้ถ้าต้องการ)
     Order *order = get_order_by_id(app->api_base_url, app->machine_name, app->token, order_id);
     if (order) {
+      if (strcmp(app->slip_type, "escpos") == 0)
         print_slip_full(app, order);
-        //print_slip_full_cairo(app, order);
-        g_free(order);
+      else if (strcmp(app->slip_type, "cairo") == 0)
+        print_slip_full_cairo(app, order);
+      g_free(order);
     }
 }
 

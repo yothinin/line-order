@@ -290,7 +290,7 @@ void print_slip_to_printer_via_cups(const char *filename) {
     free(bitmap);
     cairo_surface_destroy(image);
 
-    print_bmp_escpos_chunked("/tmp/slip.bmp");               // ส่งไปพิมพ์ ESC/POS
+    //print_bmp_escpos_chunked("/tmp/slip.bmp");               // ส่งไปพิมพ์ ESC/POS
 
 }
 
@@ -497,34 +497,34 @@ void print_slip_full_cairo(AppWidgets *app, Order *order) {
         draw_center_text(layout, cr, surface_width, &y, buf, 14, 0);
     }
 
-    // -------- QR Order ID --------
-    char order_qr[32];
-    snprintf(order_qr, sizeof(order_qr), "%d", order->order_id);
-    QRcode *order_qrcode = QRcode_encodeString(order_qr, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
+    //// -------- QR Order ID --------
+    //char order_qr[32];
+    //snprintf(order_qr, sizeof(order_qr), "%d", order->order_id);
+    //QRcode *order_qrcode = QRcode_encodeString(order_qr, 0, QR_ECLEVEL_Q, QR_MODE_8, 1);
 
-    if (order_qrcode) {
-        int scale = 4;
-        int margin = 2;
-        int qr_draw_size = (order_qrcode->width + 2 * margin) * scale;
-        int qr_x = surface_width - qr_draw_size - 10;
-        int qr_y = 10;
+    //if (order_qrcode) {
+        //int scale = 4;
+        //int margin = 2;
+        //int qr_draw_size = (order_qrcode->width + 2 * margin) * scale;
+        //int qr_x = surface_width - qr_draw_size - 10;
+        //int qr_y = 10;
 
-        cairo_set_source_rgb(cr, 1, 1, 1);
-        cairo_rectangle(cr, qr_x, qr_y, qr_draw_size, qr_draw_size);
-        cairo_fill(cr);
+        //cairo_set_source_rgb(cr, 1, 1, 1);
+        //cairo_rectangle(cr, qr_x, qr_y, qr_draw_size, qr_draw_size);
+        //cairo_fill(cr);
 
-        cairo_save(cr);
-        cairo_translate(cr, qr_x + margin * scale, qr_y + margin * scale);
-        cairo_set_source_rgb(cr, 0, 0, 0);
-        for (int yy = 0; yy < order_qrcode->width; yy++)
-            for (int xx = 0; xx < order_qrcode->width; xx++)
-                if (order_qrcode->data[yy * order_qrcode->width + xx] & 1)
-                    cairo_rectangle(cr, xx * scale, yy * scale, scale, scale);
-        cairo_fill(cr);
-        cairo_restore(cr);
+        //cairo_save(cr);
+        //cairo_translate(cr, qr_x + margin * scale, qr_y + margin * scale);
+        //cairo_set_source_rgb(cr, 0, 0, 0);
+        //for (int yy = 0; yy < order_qrcode->width; yy++)
+            //for (int xx = 0; xx < order_qrcode->width; xx++)
+                //if (order_qrcode->data[yy * order_qrcode->width + xx] & 1)
+                    //cairo_rectangle(cr, xx * scale, yy * scale, scale, scale);
+        //cairo_fill(cr);
+        //cairo_restore(cr);
 
-        QRcode_free(order_qrcode);
-    }
+        //QRcode_free(order_qrcode);
+    //}
 
     // -------- เขียน PNG --------
     cairo_surface_write_to_png(surface, "/tmp/slip.png");
@@ -535,5 +535,5 @@ void print_slip_full_cairo(AppWidgets *app, Order *order) {
 
     printf("✅ สลิปสร้างเสร็จแล้ว: /tmp/slip.png\n");
 
-    print_bmp_escpos_chunked("/tmp/slip.png");
+    //print_bmp_escpos_chunked("/tmp/slip.png");
 }
