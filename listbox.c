@@ -640,27 +640,24 @@ gpointer refresh_data_thread(gpointer user_data) {
 
         gchar *json_data = fetch_orders_json(url);
 
-        if (json_data) {
-            int new_max_id = extract_max_id(json_data);
+        int new_max_id = extract_max_id(json_data);
 
-            if (new_max_id > app->last_max_id) {
-                app->last_max_id = new_max_id;
+        if (new_max_id > app->last_max_id) {
+            app->last_max_id = new_max_id;
 
-                // เรียกโปรแกรม buzzer ที่คุณมีอยู่แล้ว
-                system("/home/yothinin/projects/line-order/buzzer");
-
-
-                // มีข้อมูลใหม่ → อัปเดต UI
-                PopulateIdleData *data = g_new0(PopulateIdleData, 1);
-                data->app = app;
-                data->json_data = json_data;
-
-                g_idle_add(populate_listbox_idle, data);
-            } else {
-                // ไม่มีข้อมูลใหม่ → free memory
-                g_free(json_data);
-            }
+            // เรียกโปรแกรม buzzer
+            system("/home/yothinin/projects/line-order/buzzer");
         }
+
+        // อัปเดต UI ทุกครั้ง
+        if (json_data) {
+            PopulateIdleData *data = g_new0(PopulateIdleData, 1);
+            data->app = app;
+            data->json_data = json_data;
+
+            g_idle_add(populate_listbox_idle, data);
+        }
+
 
         g_usleep(5 * G_USEC_PER_SEC); // ปรับเวลาได้ตามต้องการ
     }
