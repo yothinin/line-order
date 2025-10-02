@@ -327,6 +327,102 @@ void update_order_canceled(AppWidgets *app, int order_id, int canceled) {
     curl_easy_cleanup(curl);
 }
 
+//void populate_listbox(AppWidgets *app, const gchar *json_data) {
+    //gtk_list_box_unselect_all(GTK_LIST_BOX(app->listbox));
+    //GError *error = NULL;
+    //JsonParser *parser = json_parser_new();
+    //if(!json_parser_load_from_data(parser, json_data, -1, &error)) {
+        //g_printerr("JSON parse error: %s\n", error->message);
+        //g_error_free(error);
+        //g_object_unref(parser);
+        //return;
+    //}
+
+    //JsonObject *root = json_node_get_object(json_parser_get_root(parser));
+    //JsonArray *orders = json_object_get_array_member(root, "orders");
+    //guint n = json_array_get_length(orders);
+
+    //// ลบ row เก่า
+    //GList *children = gtk_container_get_children(GTK_CONTAINER(app->listbox));
+    //for(GList *iter = children; iter != NULL; iter = g_list_next(iter))
+        //gtk_widget_destroy(GTK_WIDGET(iter->data));
+    //g_list_free(children);
+
+    //for(guint i = 0; i < n; i++) {
+        //JsonObject *order = json_array_get_object_element(orders, i);
+        //gint id = json_object_get_int_member(order, "id");
+        //const gchar *line_name = json_object_get_string_member(order, "line_name");
+        //const gchar *line_id = json_object_get_string_member(order, "line_id");
+        //const gchar *place = json_object_get_string_member(order, "place");
+        //const gchar *delivery_time = json_object_get_string_member(order, "delivery_time");
+        //gint status = json_object_get_int_member(order, "status");
+
+        //const gchar *items_str = json_object_get_string_member(order, "items");
+
+        //JsonParser *items_parser = json_parser_new();
+        //json_parser_load_from_data(items_parser, items_str, -1, NULL);
+        //JsonArray *items = json_node_get_array(json_parser_get_root(items_parser));
+
+        //const gchar *status_text = "";
+        //if(status > 0 && status < 5) {
+            //status_text = STATUS_NAMES[status];
+        //}
+
+        //GString *label_text = g_string_new(NULL);
+        //g_string_append_printf(label_text, "#%d %s | %s | %s %s\n", id, line_name, place, delivery_time, status_text);
+
+        //guint m = json_array_get_length(items);
+        //double total = 0.0;
+        //for(guint j = 0; j < m; j++) {
+            //JsonObject *item = json_array_get_object_element(items, j);
+            //const gchar *item_name = json_object_get_string_member(item, "item_name");
+            //int qty = json_object_get_int_member(item, "qty");
+            //const gchar *price_str = json_object_get_string_member(item, "price");
+            //double price = atof(price_str);
+            //const gchar *option_text = json_object_get_string_member(item, "option_text");
+
+            //g_string_append_printf(label_text, "\t-%s %d\n", item_name, qty);
+            //if(option_text && strlen(option_text) > 0)
+                //g_string_append_printf(label_text, "\t (%s)\n", option_text);
+
+            //total += qty * price;
+        //}
+        //g_string_append_printf(label_text, "\t ยอดรวม %.2f\n", total);
+
+        //GtkWidget *label = gtk_label_new(label_text->str);
+        //gtk_label_set_xalign(GTK_LABEL(label), 0);
+        //gtk_label_set_yalign(GTK_LABEL(label), 0.5);
+        //gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
+
+        //// 🔹 ใส่ class ถ้า status == 1
+        //if (status == 1) {
+            //GtkStyleContext *ctx = gtk_widget_get_style_context(label);
+            //gtk_style_context_add_class(ctx, "status-1");
+        //}
+
+        //GtkWidget *row = gtk_list_box_row_new();
+        //g_object_set_data(G_OBJECT(row), "status", GINT_TO_POINTER(status));
+
+        //gtk_container_add(GTK_CONTAINER(row), label);
+        //g_object_set_data_full(G_OBJECT(row), "line_id", g_strdup(line_id), g_free);
+
+        //gtk_list_box_insert(GTK_LIST_BOX(app->listbox), row, i);
+
+        //g_string_free(label_text, TRUE);
+        //g_object_unref(items_parser);
+    //}
+
+    //gtk_widget_show_all(app->listbox);
+
+    //if(app->selected_index >= 0 && app->selected_index < (gint)n) {
+        //GtkListBoxRow *row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(app->listbox), app->selected_index);
+        //gtk_list_box_select_row(GTK_LIST_BOX(app->listbox), row);
+        //gtk_widget_grab_focus(GTK_WIDGET(app->listbox));
+    //}
+
+    //g_object_unref(parser);
+//}
+
 void populate_listbox(AppWidgets *app, const gchar *json_data) {
     gtk_list_box_unselect_all(GTK_LIST_BOX(app->listbox));
     GError *error = NULL;
@@ -402,6 +498,7 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
 
         GtkWidget *row = gtk_list_box_row_new();
         g_object_set_data(G_OBJECT(row), "status", GINT_TO_POINTER(status));
+        g_object_set_data(G_OBJECT(row), "order_id", GINT_TO_POINTER(id));   // ✅ บันทึก order_id
 
         gtk_container_add(GTK_CONTAINER(row), label);
         g_object_set_data_full(G_OBJECT(row), "line_id", g_strdup(line_id), g_free);
@@ -418,10 +515,15 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
         GtkListBoxRow *row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(app->listbox), app->selected_index);
         gtk_list_box_select_row(GTK_LIST_BOX(app->listbox), row);
         gtk_widget_grab_focus(GTK_WIDGET(app->listbox));
+
+        // ✅ Debug: ตรวจสอบว่า order_id ถูกบันทึกไว้จริง
+        gint order_id = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(row), "order_id"));
+        g_print("[DEBUG] Selected row order_id = %d\n", order_id);
     }
 
     g_object_unref(parser);
 }
+
 
 //void refresh_data(AppWidgets *app) {
     //char date_str[11] = {0};
@@ -450,7 +552,71 @@ void populate_listbox(AppWidgets *app, const gchar *json_data) {
     //}
 //}
 
-// --- background thread ทำงาน fetch ---
+//// --- background thread ทำงาน fetch ---
+//gpointer refresh_data_thread(gpointer user_data) {
+    //AppWidgets *app = (AppWidgets *)user_data;
+
+    //while (1) {
+        //char date_str[11] = {0};
+        //if (strlen(app->filter_date) > 0) {
+            //strncpy(date_str, app->filter_date, sizeof(date_str) - 1);
+            //date_str[sizeof(date_str) - 1] = '\0';
+        //} else {
+            //time_t t = time(NULL);
+            //struct tm tm_now;
+            //localtime_r(&t, &tm_now);
+            //strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
+        //}
+
+        //char url[1024];
+        //snprintf(url, sizeof(url),
+                 //"%s/api/store/orders?date=%s&monitor=%d",
+                 //app->api_base_url, date_str,
+                 //(app->selected_monitor > 0 ? app->selected_monitor : 1));
+
+        //gchar *json_data = fetch_orders_json(url);
+
+        //if (json_data) {
+            //// จัดเตรียมข้อมูลสำหรับอัปเดต UI (ผ่าน main loop)
+            //PopulateIdleData *data = g_new0(PopulateIdleData, 1);
+            //data->app = app;              // ใช้ pointer จริง
+            //data->json_data = json_data;  // ส่ง ownership ไป populate_listbox_idle
+
+            //// เรียกอัปเดต widget ผ่าน main loop → ปลอดภัยกับ GTK
+            //g_idle_add(populate_listbox_idle, data);
+        //}
+
+        //// พัก 5 วินาที (หรือจะปรับค่าได้ตามต้องการ)
+        //g_usleep(5 * G_USEC_PER_SEC);
+    //}
+
+    //return NULL;
+//}
+
+int extract_max_id(const gchar *json_data) {
+    JsonParser *parser = json_parser_new();
+    if (!json_parser_load_from_data(parser, json_data, -1, NULL)) {
+        g_object_unref(parser);
+        return 0;
+    }
+
+    JsonNode *root = json_parser_get_root(parser);
+    JsonObject *root_obj = json_node_get_object(root);
+    JsonArray *orders = json_object_get_array_member(root_obj, "orders");
+
+    int max_id = 0;
+    for (guint i = 0; i < json_array_get_length(orders); i++) {
+        JsonObject *order = json_array_get_object_element(orders, i);
+        if (json_object_has_member(order, "id")) {
+            int id = json_object_get_int_member(order, "id");
+            if (id > max_id) max_id = id;
+        }
+    }
+
+    g_object_unref(parser);
+    return max_id;
+}
+
 gpointer refresh_data_thread(gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
 
@@ -475,21 +641,33 @@ gpointer refresh_data_thread(gpointer user_data) {
         gchar *json_data = fetch_orders_json(url);
 
         if (json_data) {
-            // จัดเตรียมข้อมูลสำหรับอัปเดต UI (ผ่าน main loop)
-            PopulateIdleData *data = g_new0(PopulateIdleData, 1);
-            data->app = app;              // ใช้ pointer จริง
-            data->json_data = json_data;  // ส่ง ownership ไป populate_listbox_idle
+            int new_max_id = extract_max_id(json_data);
 
-            // เรียกอัปเดต widget ผ่าน main loop → ปลอดภัยกับ GTK
-            g_idle_add(populate_listbox_idle, data);
+            if (new_max_id > app->last_max_id) {
+                app->last_max_id = new_max_id;
+
+                // เรียกโปรแกรม buzzer ที่คุณมีอยู่แล้ว
+                system("/home/yothinin/projects/line-order/buzzer");
+
+
+                // มีข้อมูลใหม่ → อัปเดต UI
+                PopulateIdleData *data = g_new0(PopulateIdleData, 1);
+                data->app = app;
+                data->json_data = json_data;
+
+                g_idle_add(populate_listbox_idle, data);
+            } else {
+                // ไม่มีข้อมูลใหม่ → free memory
+                g_free(json_data);
+            }
         }
 
-        // พัก 5 วินาที (หรือจะปรับค่าได้ตามต้องการ)
-        g_usleep(5 * G_USEC_PER_SEC);
+        g_usleep(5 * G_USEC_PER_SEC); // ปรับเวลาได้ตามต้องการ
     }
 
     return NULL;
 }
+
 
 void refocus_first_row(AppWidgets *app) {
     GtkListBox *listbox = GTK_LIST_BOX(app->listbox);
@@ -560,10 +738,12 @@ gboolean refocus_first_row_idle(gpointer user_data) {
         app->selected_index = 0;
 
         // 🔹 ดึง order_id ที่ผูกกับ row นี้ (ถ้ามีเก็บไว้ตอนสร้าง)
-        gpointer order_id_ptr = g_object_get_data(G_OBJECT(first_row), "order-id");
+        gpointer order_id_ptr = g_object_get_data(G_OBJECT(first_row), "order_id");
         if (order_id_ptr) {
-            const char *order_id = (const char *)order_id_ptr;
-            g_print("[DEBUG] First row order_id = %s\n", order_id);
+        
+            gint order_id = GPOINTER_TO_INT(order_id_ptr);
+            //const char *order_id = (const char *)order_id_ptr;
+            g_print("[DEBUG] First row order_id = %d\n", order_id);
         } else {
             g_print("[DEBUG] First row ไม่มี order_id ที่ผูกไว้\n");
         }
@@ -573,8 +753,6 @@ gboolean refocus_first_row_idle(gpointer user_data) {
 
     return FALSE; // เรียกครั้งเดียว
 }
-
-
 
 // --- btn_done_clicked_cb แบบ async ---
 void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
@@ -604,10 +782,6 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
     // 🔹 รีเฟรช listbox แบบ async
     g_thread_new("refresh_data_done", refresh_data_thread, app);
 
-    // 🔹 restore row เดิม
-    //g_idle_add(refocus_first_row_idle, app);
-
-
     // 🔹 print slip แบบเดิม (สามารถปรับเป็น async ได้ถ้าต้องการ)
     Order *order = get_order_by_id(app->api_base_url, app->machine_name, app->token, order_id);
     if (order) {
@@ -617,9 +791,10 @@ void btn_done_clicked_cb(GtkButton *button, gpointer user_data) {
         print_slip_full_cairo(app, order);
       g_free(order);
     }
-    
-    g_idle_add(refocus_first_row_idle, app);
-    
+
+    app->refocus_after_update = TRUE;
+    //g_idle_add(refocus_first_row_idle, app);
+
 }
 
 void on_row_selected(GtkListBox *box, GtkListBoxRow *row, AppWidgets *app) {
@@ -768,6 +943,20 @@ gboolean populate_listbox_idle(gpointer user_data) {
             }
         }
         g_list_free(children);
+    }
+    
+    // 🔹 refocus ไป row แรก เฉพาะเมื่อกด btn_done
+    if (app->refocus_after_update) {
+        app->refocus_after_update = FALSE; // รีเซ็ต flag
+        //g_idle_add(refocus_first_row_idle, app);
+        //refocus_first_row(app);
+        GtkListBox *listbox = GTK_LIST_BOX(app->listbox);
+        GtkListBoxRow *first_row = gtk_list_box_get_row_at_index(listbox, 0);
+        if (first_row) {
+            gtk_list_box_select_row(listbox, first_row);
+            gtk_widget_grab_focus(GTK_WIDGET(listbox));
+            app->selected_index = 0;
+        }
     }
 
     g_object_unref(parser);
@@ -1282,6 +1471,7 @@ int main(int argc, char *argv[]) {
     chdir("/home/yothinin/projects/line-order/");
 
     app.filter_date[0] = '\0'; // เริ่มต้นเป็น empty string
+    app.refocus_after_update = FALSE;
     load_dotenv_to_struct(&app, ".env");
     
     g_print("Loaded API_BASE_URL: %s\n", app.api_base_url);

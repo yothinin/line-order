@@ -88,6 +88,9 @@ typedef struct {
         // เพิ่มส่วนนี้
     char line_id[128];
     char selected_date[11]; // YYYY-MM-DD
+    gboolean refocus_after_update;
+    
+    int last_max_id; // เก็บ max id ล่าสุด
 
 } AppWidgets;
 
