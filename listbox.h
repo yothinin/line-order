@@ -16,6 +16,7 @@
 #define PAPER_WIDTH_MM 80
 #define DPI 203 // thermal printer ส่วนมาก ~203 dpi
 #define PAPER_WIDTH_PX ((PAPER_WIDTH_MM/25.4)*DPI)
+#define MAX_MONITORS 3
 
 typedef enum {
     MEASURE_ONLY,
@@ -90,8 +91,7 @@ typedef struct {
     char selected_date[11]; // YYYY-MM-DD
     gboolean refocus_after_update;
     
-    int last_max_id; // เก็บ max id ล่าสุด
-
+    int last_max_id[MAX_MONITORS];
 } AppWidgets;
 
 typedef struct {
