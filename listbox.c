@@ -14,9 +14,6 @@
 #include "slip_cairo.h"
 //#include "qrpayment.h"
 
-
-#define MAX_MONITORS 3
-
 GAsyncQueue *queue;
 
 typedef struct {
@@ -620,11 +617,8 @@ int extract_max_id(const gchar *json_data) {
     return max_id;
 }
 
-
 gpointer refresh_data_thread(gpointer user_data) {
     AppWidgets *app = (AppWidgets *)user_data;
-
-    int last_max_id[MAX_MONITORS] = {0}; // เก็บ max_id ล่าสุดของแต่ละ monitor
 
     while (1) {
         char date_str[11] = {0};
@@ -638,94 +632,38 @@ gpointer refresh_data_thread(gpointer user_data) {
             strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
         }
 
-        // ตรวจสอบ monitor ทุกตัว
-        for (int monitor = 1; monitor <= MAX_MONITORS; monitor++) {
-            char url[1024];
-            snprintf(url, sizeof(url),
-                     "%s/api/store/orders?date=%s&monitor=%d",
-                     app->api_base_url, date_str, monitor);
+        char url[1024];
+        snprintf(url, sizeof(url),
+                 "%s/api/store/orders?date=%s&monitor=%d",
+                 app->api_base_url, date_str,
+                 (app->selected_monitor > 0 ? app->selected_monitor : 1));
 
-            gchar *json_data = fetch_orders_json(url);
-            int new_max_id = extract_max_id(json_data);
+        gchar *json_data = fetch_orders_json(url);
 
-            if (new_max_id > last_max_id[monitor]) {
-                last_max_id[monitor] = new_max_id;
+        int new_max_id = extract_max_id(json_data);
 
-                // เรียก buzzer พร้อมพารามิเตอร์ monitor
-                char cmd[128];
-                snprintf(cmd, sizeof(cmd), "/home/yothinin/projects/line-order/buzzer %d", monitor);
-                system(cmd);
-            }
+        if (new_max_id > app->last_max_id) {
+            app->last_max_id = new_max_id;
 
-            // อัปเดต UI เฉพาะ monitor ที่เลือก
-            if (monitor == app->selected_monitor || app->selected_monitor == 0) {
-                if (json_data) {
-                    PopulateIdleData *data = g_new0(PopulateIdleData, 1);
-                    data->app = app;
-                    data->json_data = json_data;
-                    g_idle_add(populate_listbox_idle, data);
-                }
-            } else {
-                if (json_data) {
-                    g_free(json_data); // ปล่อยหน่วยความจำ
-                }
-            }
+            // เรียกโปรแกรม buzzer
+            system("/home/yothinin/projects/line-order/buzzer");
         }
+
+        // อัปเดต UI ทุกครั้ง
+        if (json_data) {
+            PopulateIdleData *data = g_new0(PopulateIdleData, 1);
+            data->app = app;
+            data->json_data = json_data;
+
+            g_idle_add(populate_listbox_idle, data);
+        }
+
 
         g_usleep(5 * G_USEC_PER_SEC); // ปรับเวลาได้ตามต้องการ
     }
 
     return NULL;
 }
-
-
-//gpointer refresh_data_thread(gpointer user_data) {
-    //AppWidgets *app = (AppWidgets *)user_data;
-
-    //while (1) {
-        //char date_str[11] = {0};
-        //if (strlen(app->filter_date) > 0) {
-            //strncpy(date_str, app->filter_date, sizeof(date_str) - 1);
-            //date_str[sizeof(date_str) - 1] = '\0';
-        //} else {
-            //time_t t = time(NULL);
-            //struct tm tm_now;
-            //localtime_r(&t, &tm_now);
-            //strftime(date_str, sizeof(date_str), "%Y-%m-%d", &tm_now);
-        //}
-
-        //char url[1024];
-        //snprintf(url, sizeof(url),
-                 //"%s/api/store/orders?date=%s&monitor=%d",
-                 //app->api_base_url, date_str,
-                 //(app->selected_monitor > 0 ? app->selected_monitor : 1));
-
-        //gchar *json_data = fetch_orders_json(url);
-
-        //int new_max_id = extract_max_id(json_data);
-
-        //if (new_max_id > app->last_max_id) {
-            //app->last_max_id = new_max_id;
-
-            //// เรียกโปรแกรม buzzer
-            //system("/home/yothinin/projects/line-order/buzzer");
-        //}
-
-        //// อัปเดต UI ทุกครั้ง
-        //if (json_data) {
-            //PopulateIdleData *data = g_new0(PopulateIdleData, 1);
-            //data->app = app;
-            //data->json_data = json_data;
-
-            //g_idle_add(populate_listbox_idle, data);
-        //}
-
-
-        //g_usleep(5 * G_USEC_PER_SEC); // ปรับเวลาได้ตามต้องการ
-    //}
-
-    //return NULL;
-//}
 
 
 void refocus_first_row(AppWidgets *app) {
