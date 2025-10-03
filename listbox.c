@@ -14,6 +14,7 @@
 #include "slip_cairo.h"
 //#include "qrpayment.h"
 
+
 #define MAX_MONITORS 3
 
 GAsyncQueue *queue;
