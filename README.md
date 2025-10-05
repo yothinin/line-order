@@ -8,13 +8,16 @@
 
 ```
 sudo apt update
-sudo apt install -y gcc libgtk-3-dev libjson-glib-dev libcurl4-openssl-dev pkg-config
+sudo apt install build-essential pkg-config \
+    libgtk-3-dev libjson-glib-dev libpango1.0-dev libcairo2-dev \
+    libcurl4-openssl-dev libqrencode-dev libpng-dev
 ```
 
 ## 🛠️ Build
 คอมไพล์ด้วย:
 ```
-gcc listbox.c -o listbox pkg-config --cflags --libs gtk+-3.0 json-glib-1.0 -lcurl -Wall
+gcc -g listbox.c slip.c slip_cairo.c qrpayment.c udp_listen.c clock.c screenfade.c order_summary.c -o listbox `pkg-config --cflags --libs gtk+-3.0 json-glib-1.0 pangocairo` -lcurl -lqrencode -lpng -Wall
+
 ```
 
 ## 🚀 Run
