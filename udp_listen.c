@@ -69,6 +69,33 @@ static void* udp_thread_func(void *arg){
                 bcd->button = btn;
                 g_idle_add(call_button, bcd);
             }
+
+	// 🚀 เพิ่มจำลอง real key ด้วย xdotool
+        char cmd[128];
+        if(strcmp(buf,"tab")==0)
+            snprintf(cmd,sizeof(cmd),"xdotool key Tab");
+        else if(strcmp(buf,"enter")==0)
+            snprintf(cmd,sizeof(cmd),"xdotool key Return");
+        else if(strcmp(buf,"space")==0)
+            snprintf(cmd,sizeof(cmd),"xdotool key space");
+        else if(strcmp(buf,"esc")==0)
+            snprintf(cmd,sizeof(cmd),"xdotool key Escape");
+        else if(strcmp(buf,"left")==0)
+            snprintf(cmd,sizeof(cmd),"xdotool key Left");
+        else if(strcmp(buf,"right")==0)
+            snprintf(cmd,sizeof(cmd),"xdotool key Right");
+        else if(strcmp(buf,"up")==0)
+            snprintf(cmd,sizeof(cmd),"xdotool key Up");
+        else if(strcmp(buf,"down")==0)
+            snprintf(cmd,sizeof(cmd),"xdotool key Down");
+        else
+            cmd[0]=0;
+
+        if(cmd[0]) {
+            int ret = system(cmd);
+            if(ret!=0) fprintf(stderr,"Failed to execute: %s\n", cmd);
+        }
+//
         }
     }
     close(sockfd);
