@@ -179,9 +179,19 @@ void show_order_summary(GtkWidget *widget, gpointer user_data) {
     gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), FALSE);
     gtk_box_pack_start(GTK_BOX(vbox), text_view, TRUE, TRUE, 0);
 
-    GtkWidget *btn_print = gtk_button_new_with_label("🖨 พิมพ์");
-    gtk_box_pack_start(GTK_BOX(vbox), btn_print, FALSE, FALSE, 5);
+    // 📦 สร้าง horizontal box สำหรับปุ่ม
+    GtkWidget *hbox_buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox_buttons, FALSE, FALSE, 5);
 
+    // ปุ่มพิมพ์
+    GtkWidget *btn_print = gtk_button_new_with_label("🖨 พิมพ์");
+    gtk_box_pack_start(GTK_BOX(hbox_buttons), btn_print, TRUE, TRUE, 0);
+
+    // ปุ่ม Exit
+    GtkWidget *btn_exit = gtk_button_new_with_label("❌ ปิดหน้าต่าง");
+    gtk_box_pack_start(GTK_BOX(hbox_buttons), btn_exit, TRUE, TRUE, 0);
+
+    // เชื่อม signal ปุ่มพิมพ์
     gchar url[512];
     snprintf(url, sizeof(url),
         "%s/api/admin/orders?lineId=%s&date=%s",
@@ -202,12 +212,61 @@ void show_order_summary(GtkWidget *widget, gpointer user_data) {
     GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view));
     gtk_text_buffer_set_text(buffer, summary_text, -1);
 
-PrintData *pdata = g_malloc(sizeof(PrintData));
-pdata->app = app;
-pdata->summary_text = summary_text;
+    PrintData *pdata = g_malloc(sizeof(PrintData));
+    pdata->app = app;
+    pdata->summary_text = summary_text;
+    g_signal_connect(btn_print, "clicked", G_CALLBACK(print_summary), pdata);
 
-g_signal_connect(btn_print, "clicked", G_CALLBACK(print_summary), pdata);
+    // เชื่อม signal ปุ่ม Exit
+    g_signal_connect_swapped(btn_exit, "clicked", G_CALLBACK(gtk_widget_destroy), window);
 
     gtk_widget_show_all(window);
     g_free(json_str);
 }
+
+
+//void show_order_summary(GtkWidget *widget, gpointer user_data) {
+    //AppWidgets *app = (AppWidgets *)user_data;
+    //GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    //gtk_window_set_title(GTK_WINDOW(window), "สรุปยอดออเดอร์");
+    //gtk_window_set_default_size(GTK_WINDOW(window), 600, 400);
+
+    //GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+    //gtk_container_add(GTK_CONTAINER(window), vbox);
+
+    //GtkWidget *text_view = gtk_text_view_new();
+    //gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), FALSE);
+    //gtk_box_pack_start(GTK_BOX(vbox), text_view, TRUE, TRUE, 0);
+
+    //GtkWidget *btn_print = gtk_button_new_with_label("🖨 พิมพ์");
+    //gtk_box_pack_start(GTK_BOX(vbox), btn_print, FALSE, FALSE, 5);
+
+    //gchar url[512];
+    //snprintf(url, sizeof(url),
+        //"%s/api/admin/orders?lineId=%s&date=%s",
+        //app->api_base_url, app->line_id, app->selected_date);
+
+    //g_print("URL: %s\n", url);
+
+    //gchar *json_str = fetch_orders_json(url);
+    //if (!json_str) {
+        //GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view));
+        //gtk_text_buffer_set_text(buffer, "❌ โหลดข้อมูลไม่สำเร็จ", -1);
+        //return;
+    //}
+
+    //gchar *summary_text = NULL;
+    //parse_orders_and_generate_summary(json_str, &summary_text);
+
+    //GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view));
+    //gtk_text_buffer_set_text(buffer, summary_text, -1);
+
+//PrintData *pdata = g_malloc(sizeof(PrintData));
+//pdata->app = app;
+//pdata->summary_text = summary_text;
+
+//g_signal_connect(btn_print, "clicked", G_CALLBACK(print_summary), pdata);
+
+    //gtk_widget_show_all(window);
+    //g_free(json_str);
+//}
