@@ -74,6 +74,8 @@ static void* udp_thread_func(void *arg){
         char cmd[128];
         if(strcmp(buf,"tab")==0)
             snprintf(cmd,sizeof(cmd),"xdotool key Tab");
+        else if(strcmp(buf,"shift_tab")==0)
+			snprintf(cmd,sizeof(cmd),"xdotool key Shift+Tab");
         else if(strcmp(buf,"enter")==0)
             snprintf(cmd,sizeof(cmd),"xdotool key Return");
         else if(strcmp(buf,"space")==0)
