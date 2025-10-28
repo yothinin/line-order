@@ -54,7 +54,7 @@ static void* udp_thread_func(void *arg){
               continue; // ไม่ต้องทำอย่างอื่น
             }
             g_print ("get: %s\n", buf);
-            
+
             GtkWidget *btn = NULL;
             if(strcmp(buf,"do")==0) btn = app->btn_do;
             else if(strcmp(buf,"done")==0) btn = app->btn_done;
@@ -90,8 +90,12 @@ static void* udp_thread_func(void *arg){
             snprintf(cmd,sizeof(cmd),"xdotool key Up");
         else if(strcmp(buf,"down")==0)
             snprintf(cmd,sizeof(cmd),"xdotool key Down");
-		else if(strcmp(buf,"alt_x")==0)
-			snprintf(cmd, sizeof(cmd), "xdotool key Alt+F4");  // Alt + x
+        else if(strcmp(buf,"alt_x")==0)
+	    snprintf(cmd, sizeof(cmd), "xdotool key Alt+F4");  // Alt + x
+	else if (strcmp(buf, "shutdown") == 0)
+            system("sudo shutdown -h now");
+        else if (strcmp(buf, "reboot") == 0)
+    	    system("sudo shutdown -r now");
         else
             cmd[0]=0;
 
