@@ -48,7 +48,7 @@ static void* udp_thread_func(void *arg){
                          (struct sockaddr*)&cliaddr, &len);
         if(n > 0){
             buf[n] = 0;
-            
+
             if(strcmp(buf,"ping")==0){
               sendto(sockfd,"pong",4,0,(struct sockaddr*)&cliaddr,len);
               continue; // ไม่ต้องทำอย่างอื่น
