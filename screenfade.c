@@ -11,7 +11,7 @@ void start_screen_fade(GtkWindow *parent) {
     gtk_window_set_transient_for(GTK_WINDOW(fade_win), parent);
     gtk_window_set_decorated(GTK_WINDOW(fade_win), FALSE);
     gtk_window_set_modal(GTK_WINDOW(fade_win), TRUE);
-    gtk_window_set_default_size(GTK_WINDOW(fade_win), 400, 300); // ปรับขนาดตามต้องการ
+    gtk_window_set_default_size(GTK_WINDOW(fade_win), 1920, 1080); // ปรับขนาดตามต้องการ
     gtk_window_set_position(GTK_WINDOW(fade_win), GTK_WIN_POS_CENTER_ON_PARENT);
 
     // CSS ให้พื้นหลังดำ
